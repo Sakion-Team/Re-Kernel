@@ -1,0 +1,23 @@
+name: 内核适配请求
+description: 请求为指定内核适配Re:Kernel
+title: "[适配] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    attributes:
+      label: 你正在使用什么设备？
+      placeholder: 包含厂商-设备型号-处理器
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: 内核版本
+      placeholder: 你正在使用什么版本的内核？（应包含小版本号）
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: 内核开源地址
+      placeholder: 填入你机型的开源内核仓库或者下载链接
+    validations:
+      required: true
