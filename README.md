@@ -25,10 +25,10 @@ If you need to use Re: Kernel, you need a device that has already been rooted. T
 Flash in the Re:Kernel module to your device so that Re:Kernel will automatically mount after each boot up.
 
 #### Method 2: Manual mounting(Need your kernel version >= 5.10)
-Get re-kernel.ko from magisk module, then place it in the data folder in the root directory and use the `insmod` command to mount the kernel module (it will stop working after rebooting, which means it needs to be mounted again every time it when your device boot) Suggest using this method first to ensure that the kernel module does not cause problems with your device!
+Get re-kernel.ko from magisk module, then place it in the data folder in the root directory and use the `insmod re-kernel.ko` command to mount the kernel module (it will stop working after rebooting, which means it needs to be mounted again every time it when your device boot) Suggest using this method first to ensure that the kernel module does not cause problems with your device!
 
 ### Method 3: Flashing Kernel(Only your kernel version <= 5.4)
-Find your device kernel from the [list of supported devices](https://github.com/Sakion-Team/Re-Kernel/tree/main/Supported-Devices), and enter the fastboot mode of the phone, then use the `fastboot flash boot` command or use another kernel flasher to flash the kernel into your phone.
+Find your device kernel from the [list of supported devices](https://github.com/Sakion-Team/Re-Kernel/tree/main/Supported-Devices), and enter the fastboot mode of the phone, then use the `fastboot flash boot <path>` command or use another kernel flasher to flash the kernel into your phone.
 
 ## Connecting the tombstone to Re:Kernel
 Re:Kernel has opened a Netlink server that allows all tombstone developers to integrate it into their own tombstones. For details, please go to the [Develop](https://github.com/Sakion-Team/Re-Kernel/tree/main/Develop) folder in the repository to view.
