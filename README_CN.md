@@ -26,10 +26,10 @@
 刷入Re:Kernel模块到你的设备 这样Re:Kernel将会在每次开机后自动挂载
 
 #### 方法二: 手动挂载(内核版本大于等于5.10)
-下载Re:Kernel内核模块，然后将他放入根目录下的data文件夹 并使用`insmod`命令挂载内核模块（重启后失效 也就是说每次开机后都得挂载一遍） 建议使用方法一前 使用此方法确保内核模块不会导致你的设备出现问题！
+从Re:Kernel模块中提取re-kernel.ko，然后将它放入根目录下的data文件夹 并使用`insmod re-kernel.ko`命令挂载内核模块（重启后失效 也就是说每次开机后都得挂载一遍） 建议使用方法一前 使用此方法确保内核模块不会导致你的设备出现问题！
 
 #### 方法三: 刷写内核(仅内核版本小于等于5.4)
-从 [Re:Kernel已适配机型列表](https://github.com/Sakion-Team/Re-Kernel/tree/main/Supported-Devices) 中寻找你设备的内核 并将手机进入fastboot模式 然后使用`fastboot flash boot`命令或使用其他内核刷写器将内核刷入你的手机
+从 [Re:Kernel已适配机型列表](https://github.com/Sakion-Team/Re-Kernel/tree/main/Supported-Devices) 中寻找你设备的内核 并将手机进入fastboot模式 然后使用`fastboot flash boot <path>`命令或使用其他内核刷写器将内核刷入你的手机
 
 ## 为墓碑接入Re:Kernel
 Re:Kernel内核开放了一个Netlink服务器 允许所有墓碑开发者将其接入自己的墓碑当中 详情请前往仓库的 [Develop](https://github.com/Sakion-Team/Re-Kernel/tree/main/Develop) 文件夹中查看
