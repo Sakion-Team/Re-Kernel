@@ -24,7 +24,7 @@ static int send_netlink_message(char *msg, uint16_t len) {
 
     skbuffer = nlmsg_new(len, GFP_ATOMIC);
     if (!skbuffer) {
-        printk("netlink alloc failure\n");
+        printk("netlink alloc failure.\n");
         return -1;
     }
 
