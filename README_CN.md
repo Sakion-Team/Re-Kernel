@@ -10,17 +10,26 @@
 
 ## 开始使用
 
+提示: 目前MIUI/HyperOS和ColorOS/RealmeUI均支持Re:Kernel正在做的事 无需使用Re:Kernel
+
+### 警告
+请确保你对 设备变砖 有所了解 如果你不会救砖 请谨慎使用方法一及方法三！
+
+使用方法一时 请确保你身边有电脑 或你的Magisk/KernelSU可以使用救砖功能 否则可能会无法开机！
+
+使用方法三时 请确保你身边有电脑 否则可能会无法开机！
+
 ### 特殊准备
 如果你需要使用Re:Kernel的话 你需要一台已经被Root的设备 目前有三种方法可以安装Re:Kernel到你的设备当中
 
-#### 推荐: Magisk模块(内核版本大于等于5.10)
+#### 方法一: 推荐: Magisk模块(内核版本大于等于5.10)
 刷入Re:Kernel模块到你的设备 这样Re:Kernel将会在每次开机后自动挂载
 
-#### 手动挂载(内核版本大于等于5.10)
+#### 方法二: 手动挂载(内核版本大于等于5.10)
 下载Re:Kernel内核模块，然后将他放入根目录下的data文件夹 并使用`insmod`命令挂载内核模块
 
-#### 刷写内核(仅内核版本小于等于5.4)
-从 [Re:Kernel已适配机型列表](https://github.com/Sakion-Team/Re-Kernel/tree/main/Supported-Devices) 中寻找你设备的内核 并将手机进入fastboot模式 然后使用`fastboot flash boot`命令将内核刷入你的手机
+#### 方法三: 刷写内核(仅内核版本小于等于5.4)
+从 [Re:Kernel已适配机型列表](https://github.com/Sakion-Team/Re-Kernel/tree/main/Supported-Devices) 中寻找你设备的内核 并将手机进入fastboot模式 然后使用`fastboot flash boot`命令或使用其他内核刷写器将内核刷入你的手机
 
 ## 为墓碑接入Re:Kernel
 Re:Kernel内核开放了一个Netlink服务器 允许所有墓碑开发者将其接入自己的墓碑当中 详情请前往仓库的 [Develop](https://github.com/Sakion-Team/Re-Kernel/tree/main/Develop) 文件夹中查看
