@@ -16,6 +16,7 @@ import nep.timeline.freezer.core.utils.StringUtils;
 public class ReKernel {
     private static boolean isRunning = false;
 
+    // You should create a new thread to invoke this method
     public static void start() {
         if (isRunning)
             return;
