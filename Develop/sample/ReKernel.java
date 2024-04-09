@@ -2,6 +2,10 @@ package nep.timeline.freezer.core.kernel;
 
 import android.system.ErrnoException;
 
+import org.apache.commons.io.FileUtils;
+
+import java.io.File;
+import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.SocketAddress;
 import java.net.SocketException;
@@ -22,7 +26,8 @@ public class ReKernel {
             return;
 
         try {
-            NetlinkClient netlinkClient = new NetlinkClient(26);
+            int proto = StringUtils.StringToInteger(FileUtils.readFileToString(new File("/proc/rekernel", "rekernel_unit"), StandardCharsets.UTF_8));
+            NetlinkClient netlinkClient = new NetlinkClient(proto);
             if (!netlinkClient.getmDescriptor().valid()) {
                 BinderHelper.start();
                 return;
@@ -49,6 +54,7 @@ public class ReKernel {
                                 // Your code
                             }
                         } else if (type.equals("Signal")) {
+                            int targetPid = StringUtils.StringToInteger(StringUtils.getSubString(data, "dst_pid=", ","));
                             int targetUid = StringUtils.StringToInteger(StringUtils.getSubString(data, "dst=", ";"));
                             // Your code
                         }
