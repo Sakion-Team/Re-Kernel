@@ -3,7 +3,7 @@
 [![Windows](https://img.shields.io/badge/platform-Android-0078d7.svg?style=plastic)](https://en.wikipedia.org/wiki/Microsoft_Windows) 
 [![x86](https://img.shields.io/badge/arch-AArch64-red.svg?style=plastic)](https://en.wikipedia.org/wiki/AArch64)
 
-Make tombstone users get a better experience.
+Make tombstone users get a better experience. ([Chinese](README_CN.md))
 
 ## Downloading
 Find your device kernel from the [list of supported devices](https://github.com/Sakion-Team/Re-Kernel/tree/main/Supported-Devices), and download it.
@@ -34,6 +34,6 @@ Find your device kernel from the [list of supported devices](https://github.com/
 Re:Kernel has opened a Netlink server that allows all tombstone developers to integrate it into their own tombstones. For details, please go to the [Develop](https://github.com/Sakion-Team/Re-Kernel/tree/main/Develop) folder in the repository to view.
 
 ## Integrate Re:Kernel for non GKI or QGKI kernels
-For users with kernel versions less than or equal to 5.4, we provide a method for users to insert Re:Kernel code into their device's kernel to support Re:Kernel. However, you should be able to build a bootable kernel from your kernel source code. If the kernel is not open source, this is almost impossible.
+For users with kernel versions less than or equal to 5.4, we provide a method for users to insert Re:Kernel code into their device's kernel to support Re:Kernel (Check [Integrate](https://github.com/Sakion-Team/Re-Kernel/blob/main/Integrate/README.md)). However, you should be able to build a bootable kernel from your kernel source code. If the kernel is not open source, this is almost impossible.
 
 Of course, if your kernel is open-source, you can also try [Issues](https://github.com/Sakion-Team/Re-Kernel/issues) Creating kernel adaptation requests in may cause developers to integrate Re:Kernel to your kernel.
