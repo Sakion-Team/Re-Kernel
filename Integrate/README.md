@@ -1,5 +1,5 @@
 # Integrate Re:Kernel for non GKI or QGKI kernels
-For users with kernel versions less than or equal to 5.4, we provide a method for users to insert Re:Kernel code into their device's kernel to support Re:Kernel. However, you should be able to build a bootable kernel from your kernel source code. If the kernel is not open source, this is almost impossible.
+First, you should be able to build a bootable kernel from your kernel source code. If the kernel is not open source, this is almost impossible.
 
 If you have made the above preparations, you can integrate Re:Kernel into your kernel as follows
 
