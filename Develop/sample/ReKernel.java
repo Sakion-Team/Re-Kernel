@@ -26,8 +26,7 @@ public class ReKernel {
             return;
 
         try {
-            int proto = StringUtils.StringToInteger(FileUtils.readFileToString(new File("/proc/rekernel", "rekernel_unit"), StandardCharsets.UTF_8));
-            NetlinkClient netlinkClient = new NetlinkClient(proto);
+            NetlinkClient netlinkClient = new NetlinkClient(26);
             if (!netlinkClient.getmDescriptor().valid()) {
                 BinderHelper.start();
                 return;
