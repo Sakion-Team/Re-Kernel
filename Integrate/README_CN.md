@@ -48,11 +48,13 @@ struct netlink_kernel_cfg cfg = {
     .input = netlink_rcv_msg,
 };
 
-static const struct proc_ops rekernel_unit_fops = {
-	.proc_open   = rekernel_unit_open,
-	.proc_read   = seq_read,
-	.proc_lseek   = seq_lseek,
-	.proc_release   = single_release,
+static const struct file_operations rekernel_unit_fops = {
+	.open   = rekernel_unit_open,
+	.read   = seq_read,
+	.write   = millet_stat_write,
+	.llseek   = seq_lseek,
+	.release   = single_release,
+	.owner   = THIS_MODULE,
 };
 
 static struct proc_dir_entry *rekernel_dir, *rekernel_unit_entry;
