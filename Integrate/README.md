@@ -11,12 +11,14 @@ Firstly, you should create a header or source file to store the NETLINK code, wi
 #include <net/sock.h>
 #include <linux/netlink.h>
 
-#define NETLINK_REKERNEL   26
+#define NETLINK_REKERNEL     			26
+#define NETLINK_REKERNEL_VIVO     		25
 #define USER_PORT          100
 #define PACKET_SIZE        128
 
 struct sock *netlink = NULL;
 extern struct net init_net;
+int netlink_unit = NETLINK_REKERNEL;
 
 static int send_netlink_message(char *msg, uint16_t len) {
     struct sk_buff *skbuffer;
@@ -46,13 +48,36 @@ struct netlink_kernel_cfg cfg = {
     .input = netlink_rcv_msg,
 };
 
+static const struct proc_ops rekernel_unit_fops = {
+	.proc_open   = rekernel_unit_open,
+	.proc_read   = seq_read,
+	.proc_lseek   = seq_lseek,
+	.proc_release   = single_release,
+};
+
+static struct proc_dir_entry *rekernel_dir, *rekernel_unit_entry;
+
 static int start_rekernel_server(void) {
   if (netlink)
     return 0;
-  netlink = (struct sock *)netlink_kernel_create(&init_net, NETLINK_REKERNEL, &cfg);
-  if (!netlink) {
-    printk("Failed to create Re:Kernel server!\n");
-    return -1;
+  nlsk = (struct sock *)netlink_kernel_create(&init_net, NETLINK_REKERNEL, &cfg);
+  if (nlsk == NULL) {
+        nlsk = (struct sock *)netlink_kernel_create(&init_net, NETLINK_REKERNEL_VIVO, &cfg);
+        if (nlsk == NULL) {
+    		printk("Failed to create Re:Kernel server!\n");
+    		return -1;
+    	}
+        netlink_unit = NETLINK_REKERNEL_VIVO;
+  }
+  rekernel_dir = proc_mkdir("rekernel", NULL);
+  if (!rekernel_dir)
+      printk("create /proc/rekernel failed!\n");
+  else {
+      char buff[32];
+      sprintf(buff, "%d", netlink_unit);
+      rekernel_unit_entry = proc_create(buff, 0644, rekernel_dir, &rekernel_unit_fops);
+      if (!rekernel_unit_entry)
+          printk("create rekernel unit failed!\n");
   }
   return 0;
 }
