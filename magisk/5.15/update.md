@@ -1,5 +1,5 @@
-现在 若UNIT 26被占用 NETLINK SERVER则以UNIT 25开启
+现在 若UNIT 26被占用 NETLINK SERVER则以UNIT 25开启 (解决VIVO的占用)
 
-现在开发者可以通过读取/proc/rebinder/rebinder_unit得到Re:Binder NETLINK的Unit
+现在墓碑开发者可以通过读取/proc/rekernel内的文件得到Re:Kernel NETLINK的Unit
 
-Signal输出内容添加killer_pid, dst_pid
+Signal输出内容添加killer_pid, dst_pid共墓碑开发者使用
