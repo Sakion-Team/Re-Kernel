@@ -3,7 +3,7 @@
 [![Windows](https://img.shields.io/badge/platform-Android-0078d7.svg?style=plastic)](https://en.wikipedia.org/wiki/Microsoft_Windows) 
 [![x86](https://img.shields.io/badge/arch-AArch64-red.svg?style=plastic)](https://en.wikipedia.org/wiki/AArch64)
 
-Make tombstone users get a better experience. ([Chinese](README_CN.md))
+Make tombstone users get a better experience. ([简体中文](README_CN.md))
 
 ## Downloading
 Find your device kernel from the [list of supported devices](https://github.com/Sakion-Team/Re-Kernel/tree/main/Supported-Devices), and download it.
