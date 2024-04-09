@@ -26,9 +26,21 @@ public class ReKernel {
             return;
 
         try {
-            NetlinkClient netlinkClient = new NetlinkClient(26);
+            File dir = new File("/proc/rekernel");
+            if (!dir.exists()) {
+                start();
+                return;
+            }
+            File[] files = dir.listFiles();
+            if (files == null) {
+                start();
+                return;
+            }
+            File file = files[0];
+            int netlinkUnit = StringUtils.StringToInteger(file.getName());
+            NetlinkClient netlinkClient = new NetlinkClient(netlinkUnit);
             if (!netlinkClient.getmDescriptor().valid()) {
-                BinderHelper.start();
+                start();
                 return;
             }
 
