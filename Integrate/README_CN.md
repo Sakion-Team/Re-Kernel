@@ -16,7 +16,7 @@
 #define USER_PORT          100
 #define PACKET_SIZE        128
 
-struct sock *netlink = NULL;
+struct sock *rekernel_netlink = NULL;
 extern struct net init_net;
 int netlink_unit = NETLINK_REKERNEL;
 
@@ -38,7 +38,7 @@ static int send_netlink_message(char *msg, uint16_t len) {
     }
 
     memcpy(nlmsg_data(nlhdr), msg, len);
-    return netlink_unicast(netlink, skbuffer, USER_PORT, MSG_DONTWAIT);
+    return netlink_unicast(rekernel_netlink, skbuffer, USER_PORT, MSG_DONTWAIT);
 }
 
 static void netlink_rcv_msg(struct sk_buff *skbuffer) { // Ignore recv msg.
@@ -70,12 +70,12 @@ static const struct file_operations rekernel_unit_fops = {
 static struct proc_dir_entry *rekernel_dir, *rekernel_unit_entry;
 
 static int start_rekernel_server(void) {
-  if (netlink)
+  if (rekernel_netlink)
     return 0;
-  nlsk = (struct sock *)netlink_kernel_create(&init_net, NETLINK_REKERNEL, &cfg);
-  if (nlsk == NULL) {
-        nlsk = (struct sock *)netlink_kernel_create(&init_net, NETLINK_REKERNEL_VIVO, &cfg);
-        if (nlsk == NULL) {
+  rekernel_netlink = (struct sock *)netlink_kernel_create(&init_net, NETLINK_REKERNEL, &cfg);
+  if (rekernel_netlink == NULL) {
+        rekernel_netlink = (struct sock *)netlink_kernel_create(&init_net, NETLINK_REKERNEL_VIVO, &cfg);
+        if (rekernel_netlink == NULL) {
     		printk("Failed to create Re:Kernel server!\n");
     		return -1;
     	}
