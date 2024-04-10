@@ -11,14 +11,14 @@ Firstly, you should create a header or source file to store the NETLINK code, wi
 #include <net/sock.h>
 #include <linux/netlink.h>
 
-#define NETLINK_REKERNEL     			26
-#define NETLINK_REKERNEL_VIVO     		25
-#define USER_PORT          100
-#define PACKET_SIZE        128
+#define NETLINK_REKERNEL_MAX     		26
+#define NETLINK_REKERNEL_MIN     		20
+#define USER_PORT        			100
+#define PACKET_SIZE 				128
 
 struct sock *rekernel_netlink = NULL;
 extern struct net init_net;
-int netlink_unit = NETLINK_REKERNEL;
+int netlink_unit = NETLINK_REKERNEL_MIN;
 
 static int send_netlink_message(char *msg, uint16_t len) {
     struct sk_buff *skbuffer;
@@ -72,14 +72,12 @@ static struct proc_dir_entry *rekernel_dir, *rekernel_unit_entry;
 static int start_rekernel_server(void) {
   if (rekernel_netlink)
     return 0;
-  rekernel_netlink = (struct sock *)netlink_kernel_create(&init_net, NETLINK_REKERNEL, &rekernel_cfg);
-  if (rekernel_netlink == NULL) {
-        rekernel_netlink = (struct sock *)netlink_kernel_create(&init_net, NETLINK_REKERNEL_VIVO, &rekernel_cfg);
-        if (rekernel_netlink == NULL) {
-    		printk("Failed to create Re:Kernel server!\n");
-    		return -1;
-    	}
-        netlink_unit = NETLINK_REKERNEL_VIVO;
+  for (int i = NETLINK_REKERNEL_MIN; i < NETLINK_REKERNEL_MAX; i++) {
+    rekernel_netlink = (struct sock *)netlink_kernel_create(&init_net, i, &rekernel_cfg);
+    if (rekernel_netlink != NULL) {
+      netlink_unit = i;
+      continue;
+    }
   }
   rekernel_dir = proc_mkdir("rekernel", NULL);
   if (!rekernel_dir)
