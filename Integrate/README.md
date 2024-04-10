@@ -30,7 +30,7 @@ static int send_netlink_message(char *msg, uint16_t len) {
         return -1;
     }
 
-    nlhdr = nlmsg_put(skbuffer, 0, 0, NETLINK_REKERNEL, len, 0);
+    nlhdr = nlmsg_put(skbuffer, 0, 0, netlink_unit, len, 0);
     if (!nlhdr) {
         printk("nlmsg_put failaure.\n");
         nlmsg_free(skbuffer);
@@ -72,7 +72,8 @@ static struct proc_dir_entry *rekernel_dir, *rekernel_unit_entry;
 static int start_rekernel_server(void) {
   if (rekernel_netlink)
     return 0;
-  for (int i = NETLINK_REKERNEL_MIN; i < NETLINK_REKERNEL_MAX; i++) {
+  int i;
+  for (i = NETLINK_REKERNEL_MIN; i < NETLINK_REKERNEL_MAX; i++) {
     rekernel_netlink = (struct sock *)netlink_kernel_create(&init_net, i, &rekernel_cfg);
     if (rekernel_netlink != NULL) {
       netlink_unit = i;
