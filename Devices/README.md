@@ -11,6 +11,11 @@
 | :-: | :-: | :-: | :-: | :-: | :-: |
 
 ## 内核兼容性追踪 | Kernel compatibility tracking
+(×) - 不兼容 | Incompatible
+
+(?) - 未知 | Unknown
+
+(✓) - 兼容 | Compatible
 | Kernel | Kernel version | Developer | Compatibility | Re:Kernel version | Link | Kernel source code |
 | :-: | :-: | :-: | :-: | :-: | :-: | :-: |
 | AngelBeats | 6.1.x | hamjin | (i) Need LKM | N/A | [Link](https://t.me/pandora_kernel_release) | N/A |
