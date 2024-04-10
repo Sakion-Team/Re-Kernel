@@ -12,7 +12,7 @@ Firstly, you should create a header or source file to store the NETLINK code, wi
 #include <linux/netlink.h>
 
 #define NETLINK_REKERNEL_MAX     		26
-#define NETLINK_REKERNEL_MIN     		20
+#define NETLINK_REKERNEL_MIN     		22
 #define USER_PORT        			100
 #define PACKET_SIZE 				128
 
@@ -76,6 +76,10 @@ static int start_rekernel_server(void) {
     rekernel_netlink = (struct sock *)netlink_kernel_create(&init_net, netlink_unit, &rekernel_cfg);
     if (rekernel_netlink != NULL)
       break;
+  }
+  if (rekernel_netlink == NULL) {
+    printk("Failed to create Re:Kernel server!\n");
+    return -1;
   }
   rekernel_dir = proc_mkdir("rekernel", NULL);
   if (!rekernel_dir)
