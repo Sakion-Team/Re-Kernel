@@ -6,7 +6,7 @@
 Make tombstone users get a better experience. ([简体中文](README_CN.md))
 
 ## Downloading
-Find your device kernel from the [list of supported devices](https://github.com/Sakion-Team/Re-Kernel/tree/main/Supported-Devices), and download it.
+Find your device kernel from the [list of supported devices](https://github.com/Sakion-Team/Re-Kernel/tree/main/Devices), and download it.
 
 ## Start use
 Tip: MIUI/HyperOS or ColorOS/RealmeUI do not require the use of this kernel.
