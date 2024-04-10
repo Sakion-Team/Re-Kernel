@@ -6,7 +6,7 @@
 使墓碑用户获得更好的使用体验。
 
 ## 下载内核
-在 [Re:Kernel已适配机型列表](https://github.com/Sakion-Team/Re-Kernel/tree/main/Supported-Devices) 中寻找你设备的内核并下载
+在 [Re:Kernel已适配机型列表](https://github.com/Sakion-Team/Re-Kernel/tree/main/Devices) 中寻找你设备的内核并下载
 
 ## 开始使用
 
