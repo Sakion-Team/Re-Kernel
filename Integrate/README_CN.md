@@ -78,7 +78,7 @@ static int start_rekernel_server(void) {
       break;
   }
   if (nlsk == NULL) {
-    pr_err("Failed to create Re:Kernel server!\n");
+    printk("Failed to create Re:Kernel server!\n");
     return -1;
   }
   rekernel_dir = proc_mkdir("rekernel", NULL);
