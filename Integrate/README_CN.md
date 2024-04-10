@@ -44,7 +44,7 @@ static int send_netlink_message(char *msg, uint16_t len) {
 static void netlink_rcv_msg(struct sk_buff *skbuffer) { // Ignore recv msg.
 }
 
-struct netlink_kernel_cfg cfg = { 
+struct netlink_kernel_cfg rekernel_cfg = { 
     .input = netlink_rcv_msg,
 };
 
@@ -72,9 +72,9 @@ static struct proc_dir_entry *rekernel_dir, *rekernel_unit_entry;
 static int start_rekernel_server(void) {
   if (rekernel_netlink)
     return 0;
-  rekernel_netlink = (struct sock *)netlink_kernel_create(&init_net, NETLINK_REKERNEL, &cfg);
+  rekernel_netlink = (struct sock *)netlink_kernel_create(&init_net, NETLINK_REKERNEL, &rekernel_cfg);
   if (rekernel_netlink == NULL) {
-        rekernel_netlink = (struct sock *)netlink_kernel_create(&init_net, NETLINK_REKERNEL_VIVO, &cfg);
+        rekernel_netlink = (struct sock *)netlink_kernel_create(&init_net, NETLINK_REKERNEL_VIVO, &rekernel_cfg);
         if (rekernel_netlink == NULL) {
     		printk("Failed to create Re:Kernel server!\n");
     		return -1;
