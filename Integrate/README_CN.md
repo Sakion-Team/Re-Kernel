@@ -75,7 +75,7 @@ static int start_rekernel_server(void) {
   for (netlink_unit = NETLINK_REKERNEL_MIN; netlink_unit < NETLINK_REKERNEL_MAX; netlink_unit++) {
     rekernel_netlink = (struct sock *)netlink_kernel_create(&init_net, netlink_unit, &rekernel_cfg);
     if (rekernel_netlink != NULL)
-      continue;
+      break;
   }
   rekernel_dir = proc_mkdir("rekernel", NULL);
   if (!rekernel_dir)
