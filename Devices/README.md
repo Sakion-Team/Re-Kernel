@@ -12,19 +12,21 @@
 | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: |
 
 ## 内核模块兼容性追踪 | Kernel module compatibility tracking
-(×) - 不兼容 | Incompatible
+(!) - 不兼容 且内核开发者对兼容性问题持消极态度 | Incompatible, and kernel developer have a negative attitude towards compatibility issues.
+
+(✘) - 不兼容 | Incompatible
 
 (?) - 未知 | Unknown
 
-(✓) - 兼容 | Compatible
+(✔) - 兼容 | Compatible
 | Kernel | Kernel version | Developer | Compatibility | Link | Kernel source code |
 | :-: | :-: | :-: | :-: | :-: | :-: |
-| AngelBeats | 6.1.x | hamjin | (✓) LKM | [Link](https://t.me/pandora_kernel_release) | N/A |
-| Yuni | 5.15.x | hamjin | (✓) LKM | [Link](https://t.me/pandora_kernel_release) | N/A |
-| Pandora | 5.10.x | hamjin | (×) | [Link](https://t.me/pandora_kernel_release) | N/A |
-| Voyager | 6.1.x | The Voyager | (✓) LKM | QQ: 652361723 | N/A |
-| Voyager | 5.15.x | The Voyager | (✓) LKM | QQ: 652361723 | N/A |
-| Voyager | 5.10.x | The Voyager | (✓) LKM | QQ: 652361723 | N/A |
+| AngelBeats | 6.1.x | hamjin | (✔) | [Link](https://t.me/pandora_kernel_release) | N/A |
+| Yuni | 5.15.x | hamjin | (✔) | [Link](https://t.me/pandora_kernel_release) | N/A |
+| Pandora | 5.10.x | hamjin | (!) | [Link](https://t.me/pandora_kernel_release) | N/A |
+| Voyager | 6.1.x | The Voyager | (✔) | QQ: 652361723 | N/A |
+| Voyager | 5.15.x | The Voyager | (✔) | QQ: 652361723 | N/A |
+| Voyager | 5.10.x | The Voyager | (✔) | QQ: 652361723 | N/A |
 
 如果你的内核与ReKernel不兼容 说明开发者对内核修改严重，破坏了GKI内核规范
 
