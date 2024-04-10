@@ -11,21 +11,20 @@
 | Device | Android version | Kernel version | Re:Kernel version | Link | Kernel source code | Binder | Signal |
 | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: |
 
-## 内核兼容性追踪 | Kernel compatibility tracking
+## 内核模块兼容性追踪 | Kernel module compatibility tracking
 (×) - 不兼容 | Incompatible
 
 (?) - 未知 | Unknown
 
 (✓) - 兼容 | Compatible
-| Kernel | Kernel version | Developer | Compatibility | Re:Kernel version | Link | Kernel source code | Binder | Signal |
-| :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: |
-| AngelBeats | 6.1.x | hamjin | (✓) LKM | N/A | [Link](https://t.me/pandora_kernel_release) | N/A | N/A | N/A |
-| Yuni | 5.15.x | hamjin | (✓) LKM | N/A | [Link](https://t.me/pandora_kernel_release) | N/A | N/A | N/A |
-| Pandora | 5.10.x | hamjin | (×) | N/A | [Link](https://t.me/pandora_kernel_release) | N/A | N/A | N/A |
-| Voyager | 6.1.x | The Voyager | (✓) LKM | N/A | QQ: 652361723 | N/A | N/A | N/A |
-| Voyager | 5.15.x | The Voyager | (✓) LKM | N/A | QQ: 652361723 | N/A | N/A | N/A |
-| Voyager | 5.10.x | The Voyager | (✓) LKM | N/A | QQ: 652361723 | N/A | N/A | N/A |
-| Voyager | 4.x | The Voyager | (×) | N/A | QQ: 652361723 | N/A | N/A | N/A |
+| Kernel | Kernel version | Developer | Compatibility | Link | Kernel source code |
+| :-: | :-: | :-: | :-: | :-: | :-: |
+| AngelBeats | 6.1.x | hamjin | (✓) LKM | [Link](https://t.me/pandora_kernel_release) | N/A |
+| Yuni | 5.15.x | hamjin | (✓) LKM | [Link](https://t.me/pandora_kernel_release) | N/A |
+| Pandora | 5.10.x | hamjin | (×) | [Link](https://t.me/pandora_kernel_release) | N/A |
+| Voyager | 6.1.x | The Voyager | (✓) LKM | QQ: 652361723 | N/A |
+| Voyager | 5.15.x | The Voyager | (✓) LKM | QQ: 652361723 | N/A |
+| Voyager | 5.10.x | The Voyager | (✓) LKM | QQ: 652361723 | N/A |
 
 如果你的内核与ReKernel不兼容 可能是因为以下原因
 
