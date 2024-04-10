@@ -72,13 +72,10 @@ static struct proc_dir_entry *rekernel_dir, *rekernel_unit_entry;
 static int start_rekernel_server(void) {
   if (rekernel_netlink)
     return 0;
-  int i;
-  for (i = NETLINK_REKERNEL_MIN; i < NETLINK_REKERNEL_MAX; i++) {
-    rekernel_netlink = (struct sock *)netlink_kernel_create(&init_net, i, &rekernel_cfg);
-    if (rekernel_netlink != NULL) {
-      netlink_unit = i;
+  for (netlink_unit = NETLINK_REKERNEL_MIN; netlink_unit < NETLINK_REKERNEL_MAX; netlink_unit++) {
+    rekernel_netlink = (struct sock *)netlink_kernel_create(&init_net, netlink_unit, &rekernel_cfg);
+    if (rekernel_netlink != NULL)
       continue;
-    }
   }
   rekernel_dir = proc_mkdir("rekernel", NULL);
   if (!rekernel_dir)
