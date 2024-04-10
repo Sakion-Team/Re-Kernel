@@ -26,10 +26,6 @@
 | Voyager | 5.15.x | The Voyager | (✓) LKM | QQ: 652361723 | N/A |
 | Voyager | 5.10.x | The Voyager | (✓) LKM | QQ: 652361723 | N/A |
 
-如果你的内核与ReKernel不兼容 可能是因为以下原因
+如果你的内核与ReKernel不兼容 说明开发者对内核修改严重，破坏了GKI内核规范
 
-内核版本大于等于5.10的GKI2.0内核：开发者对内核修改严重，破坏了GKI内核规范
-
-内核版本小于等于5.4：开发者未将ReKernel集成到内核当中
-
-若你的内核与ReKernel不兼容 应与内核开发者联系 而不是ReKernel开发者
+若你正在使用与ReKernel不兼容的内核 你应当与内核开发者进行联系 而不是ReKernel开发者 或者使用官方内核而不是第三方内核
