@@ -123,7 +123,7 @@ static void binder_transaction(struct binder_proc *proc,
 +   		if (start_rekernel_server() == 0) {
 +     			char binder_kmsg[PACKET_SIZE];
 +         		snprintf(binder_kmsg, sizeof(binder_kmsg), "type=Binder,bindertype=reply,oneway=%d,from=%d,target=%d;", tr->flags & TF_ONE_WAY, task_uid(proc->tsk).val, task_uid(target_proc->tsk).val);
-+         		send_usrmsg(binder_kmsg, strlen(binder_kmsg));
++         		send_netlink_message(binder_kmsg, strlen(binder_kmsg));
 +   		}
 	} else {
 		if (tr->target.handle) {
@@ -180,7 +180,7 @@ static void binder_transaction(struct binder_proc *proc,
 +   		if (start_rekernel_server() == 0) {
 +     			char binder_kmsg[PACKET_SIZE];
 +         		snprintf(binder_kmsg, sizeof(binder_kmsg), "type=Binder,bindertype=transaction,oneway=%d,from=%d,target=%d;", tr->flags & TF_ONE_WAY, task_uid(proc->tsk).val, task_uid(target_proc->tsk).val);
-+         		send_usrmsg(binder_kmsg, strlen(binder_kmsg));
++         		send_netlink_message(binder_kmsg, strlen(binder_kmsg));
 +   		}
 		if (security_binder_transaction(proc->cred,
 						target_proc->cred) < 0) {
@@ -204,7 +204,7 @@ int do_send_sig_info(int sig, struct siginfo *info, struct task_struct *p,
 + 		if (start_rekernel_server() == 0) {
 +     			char binder_kmsg[PACKET_SIZE];
 +     			snprintf(binder_kmsg, sizeof(binder_kmsg), "type=Signal,signal=%d,killer=%d,dst=%d;", sig, task_uid(p).val, task_uid(current).val);
-+     			send_usrmsg(binder_kmsg, strlen(binder_kmsg));
++     			send_netlink_message(binder_kmsg, strlen(binder_kmsg));
 + 		}
 + 	}
 	if (lock_task_sighand(p, &flags)) {
