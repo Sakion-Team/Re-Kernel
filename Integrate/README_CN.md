@@ -48,10 +48,20 @@ struct netlink_kernel_cfg cfg = {
     .input = netlink_rcv_msg,
 };
 
+static int rekernel_unit_show(struct seq_file *m, void *v)
+{
+	seq_printf(m, "%d\n", netlink_unit);
+	return 0;
+}
+
+static int rekernel_unit_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, rekernel_unit_show, NULL);
+}
+
 static const struct file_operations rekernel_unit_fops = {
 	.open   = rekernel_unit_open,
 	.read   = seq_read,
-	.write   = millet_stat_write,
 	.llseek   = seq_lseek,
 	.release   = single_release,
 	.owner   = THIS_MODULE,
