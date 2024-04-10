@@ -9,3 +9,14 @@
 ### WARNING: The inclusion of the kernel does not mean that the kernel source code has been reviewed by the Sakion Team, any issues arising shall be borne by the user.
 | Device | Android version | Kernel version | Re:Kernel version | Link | Kernel source code |
 | :-: | :-: | :-: | :-: | :-: | :-: |
+
+## 内核兼容性追踪 | Kernel compatibility tracking
+| Kernel | Kernel version | Developer | Compatibility | Re:Kernel version | Link | Kernel source code |
+| :-: | :-: | :-: | :-: | :-: | :-: | :-: |
+| AngelBeats | 6.1.x | hamjin | (i) Need LKM | N/A | [Link](https://t.me/pandora_kernel_release) | N/A |
+| Yuni | 5.15.x | hamjin | (i) Need LKM | N/A | [Link](https://t.me/pandora_kernel_release) | N/A |
+| Pandora | 5.10.x | hamjin | (?) | N/A | [Link](https://t.me/pandora_kernel_release) | N/A |
+| Voyager | 6.1.x | The Voyager | (i) Need LKM | N/A | QQ: 652361723 | N/A |
+| Voyager | 5.15.x | The Voyager | (i) Need LKM | N/A | QQ: 652361723 | N/A |
+| Voyager | 5.10.x | The Voyager | (i) Need LKM | N/A | QQ: 652361723 | N/A |
+| Voyager | 4.x | The Voyager | (×) | N/A | QQ: 652361723 | N/A |
