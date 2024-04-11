@@ -1,8 +1,8 @@
 ## 由咲音团队编译的内核文件 | Kernel files compiled by Sakion Team
 | Device | Android version | Kernel version | Re:Kernel version | Link | Kernel source code | Binder | Signal |
 | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: |
-| GKI | UPSIDE_DOWN_CAKE | 6.1.x | 3.1 | [Download](https://www.123pan.com/s/h1szVv-9mv4H.html) | N/A | ✓ | ✓ |
-| GKI | TIRAMISU | 5.15.x | 3.0 | [Download](https://www.123pan.com/s/h1szVv-9mv4H.html) | N/A | ✓ | ✓ |
+| GKI | UPSIDE_DOWN_CAKE | 6.1.x | 3.5 | [Download](https://www.123pan.com/s/h1szVv-9mv4H.html) | N/A | ✓ | ✓ |
+| GKI | TIRAMISU | 5.15.x | 3.5 | [Download](https://www.123pan.com/s/h1szVv-9mv4H.html) | N/A | ✓ | ✓ |
 | GKI | Android S | 5.10.x | 3.0 | [Download](https://www.123pan.com/s/h1szVv-9mv4H.html) | N/A | ✓ | ✓ |
 | Realme Q2 Pro | Android Q | 4.14.186 | 3.0 | [Download](https://github.com/Sakion-Team/Re-Kernel/releases/download/other/Realme-Q2-Pro-AnyKernel3.zip) | [Link](https://github.com/Yxiguan/android_kernel_mtk6853) | ✓ | × |
 ## 由第三方开发者编译的内核文件 | Kernel files compiled by third-party developers
