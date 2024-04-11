@@ -28,14 +28,10 @@ public class ReKernel {
         try {
             // Additionally, developers can create a new value in the configuration file for users to fill in the unit themselves
             File dir = new File("/proc/rekernel");
-            if (!dir.exists()) {
-                start();
-                return;
-            }
+            while (!dir.exists());
             File[] files = dir.listFiles();
-            if (files == null) {
-                start();
-                return;
+            while (files == null) {
+                files = dir.listFiles();
             }
             File file = files[0];
             int netlinkUnit = StringUtils.StringToInteger(file.getName());
