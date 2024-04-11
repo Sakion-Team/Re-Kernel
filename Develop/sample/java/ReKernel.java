@@ -26,6 +26,7 @@ public class ReKernel {
             return;
 
         try {
+            // Additionally, developers can create a new value in the configuration file for users to fill in the unit themselves
             File dir = new File("/proc/rekernel");
             if (!dir.exists()) {
                 start();
