@@ -36,10 +36,8 @@ public class ReKernel {
             File file = files[0];
             int netlinkUnit = StringUtils.StringToInteger(file.getName());
             NetlinkClient netlinkClient = new NetlinkClient(netlinkUnit);
-            if (!netlinkClient.getmDescriptor().valid()) {
-                start();
-                return;
-            }
+            while (!netlinkClient.getmDescriptor().valid())
+                netlinkClient = new NetlinkClient(netlinkUnit);
 
             netlinkClient.bind((SocketAddress) new NetlinkSocketAddress(100).toInstance());
 
