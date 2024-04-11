@@ -12,8 +12,6 @@
 | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: |
 
 ## 内核模块兼容性追踪 | Kernel module compatibility tracking
-(!) - 不兼容 且内核开发者对兼容性问题持消极态度 | Incompatible, and kernel developer have a negative attitude towards compatibility issues.
-
 (✘) - 不兼容 | Incompatible
 
 (?) - 未知 | Unknown
