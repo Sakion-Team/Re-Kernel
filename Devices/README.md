@@ -21,7 +21,7 @@
 | :-: | :-: | :-: | :-: | :-: | :-: |
 | AngelBeats | 6.1.x | hamjin | (✔) | [Link](https://t.me/pandora_kernel_release) | N/A |
 | Yuni | 5.15.x | hamjin | (✔) | [Link](https://t.me/pandora_kernel_release) | N/A |
-| Pandora | 5.10.x | hamjin | (!) | [Link](https://t.me/pandora_kernel_release) | N/A |
+| Pandora | 5.10.x | hamjin | (✘) | [Link](https://t.me/pandora_kernel_release) | N/A |
 | Voyager | 6.1.x | The Voyager | (✔) | QQ: 652361723 | N/A |
 | Voyager | 5.15.x | The Voyager | (✔) | QQ: 652361723 | N/A |
 | Voyager | 5.10.x | The Voyager | (✔) | QQ: 652361723 | N/A |
