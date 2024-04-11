@@ -77,6 +77,7 @@ static int start_rekernel_server(void) {
     if (rekernel_netlink != NULL)
       break;
   }
+  printk("Created Re:Kernel server! NETLINK UNIT: %d\n", netlink_unit);
   if (rekernel_netlink == NULL) {
     printk("Failed to create Re:Kernel server!\n");
     return -1;
