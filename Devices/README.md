@@ -3,7 +3,7 @@
 | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: |
 | GKI | UPSIDE_DOWN_CAKE | 6.1.x | 3.5 | [Download](https://www.123pan.com/s/h1szVv-9mv4H.html) | N/A | ✓ | ✓ |
 | GKI | TIRAMISU | 5.15.x | 3.5 | [Download](https://www.123pan.com/s/h1szVv-9mv4H.html) | N/A | ✓ | ✓ |
-| GKI | Android S | 5.10.x | 3.0 | [Download](https://www.123pan.com/s/h1szVv-9mv4H.html) | N/A | ✓ | ✓ |
+| GKI | Android S | 5.10.x | 3.5 | [Download](https://www.123pan.com/s/h1szVv-9mv4H.html) | N/A | ✓ | ✓ |
 ## 由第三方开发者编译的内核文件 | Kernel files compiled by third-party developers
 ### 警告: 内核被收录并不代表内核源代码受到咲音团队审查，出现任何问题由用户自行承担。
 ### WARNING: The inclusion of the kernel does not mean that the kernel source code has been reviewed by the Sakion Team, any issues arising shall be borne by the user.
@@ -20,7 +20,7 @@
 | :-: | :-: | :-: | :-: | :-: | :-: |
 | AngelBeats | 6.1.x | hamjin | (✔) | [Link](https://t.me/pandora_kernel_release) | N/A |
 | Yuni | 5.15.x | hamjin | (✔) | [Link](https://t.me/pandora_kernel_release) | N/A |
-| Pandora | 5.10.x | hamjin | (✔) VER ＞ 24.03.30 | [Link](https://t.me/pandora_kernel_release) | N/A |
+| Pandora | 5.10.x | hamjin | (✔) VER > 24.03.30 | [Link](https://t.me/pandora_kernel_release) | N/A |
 | Voyager | 6.1.x | The Voyager | (✔) | QQ: 652361723 | N/A |
 | Voyager | 5.15.x | The Voyager | (✔) | QQ: 652361723 | N/A |
 | Voyager | 5.10.x | The Voyager | (✔) | QQ: 652361723 | N/A |
