@@ -40,4 +40,5 @@ Of course, if your kernel is open-source, you can also try [Issues](https://gith
 
 ## Q / A
 Q: Will this module leak Root?
+
 A: No, the kernel module cannot be detected.
