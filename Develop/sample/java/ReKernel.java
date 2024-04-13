@@ -54,12 +54,16 @@ public class ReKernel {
                         if (type.equals("Binder")) {
                             String bindertype = StringUtils.getSubString(data, "bindertype=", ",").trim();
                             int oneway = StringUtils.StringToInteger(StringUtils.getSubString(data, "oneway=", ","));
+                            int fromPid = StringUtils.StringToInteger(StringUtils.getSubString(data, "from_pid=", ","));
                             int fromUid = StringUtils.StringToInteger(StringUtils.getSubString(data, "from=", ","));
+                            int targetPid = StringUtils.StringToInteger(StringUtils.getSubString(data, "target_pid=", ","));
                             int targetUid = StringUtils.StringToInteger(StringUtils.getSubString(data, "target=", ";"));
                             if (oneway == 0 || bindertype.equals("free_buffer_full")) {
                                 // Your code
                             }
                         } else if (type.equals("Signal")) {
+                            int killerPid = StringUtils.StringToInteger(StringUtils.getSubString(data, "killer_pid=", ","));
+                            int killerUid = StringUtils.StringToInteger(StringUtils.getSubString(data, "killer=", ","));
                             int targetPid = StringUtils.StringToInteger(StringUtils.getSubString(data, "dst_pid=", ","));
                             int targetUid = StringUtils.StringToInteger(StringUtils.getSubString(data, "dst=", ";"));
                             // Your code
