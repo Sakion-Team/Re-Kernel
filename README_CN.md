@@ -38,3 +38,8 @@ Re:Kernel内核开放了一个Netlink服务器 允许所有墓碑开发者将其
 对于内核版本小于等于5.4的用户 我们提供方法让用户可以自行将Re:Kernel代码插入你的设备内核当中 让其内核支持Re:Kernel (查看 [集成](https://github.com/Sakion-Team/Re-Kernel/blob/main/Integrate/README_CN.md)) 但前提是 你必须有能力从你设备的内核源码编译出一个可以开机并且能正常使用的内核 如果内核不开源的话 这几乎是不可能的
 
 当然 如果你的内核开源 也可以尝试在 [Issues](https://github.com/Sakion-Team/Re-Kernel/issues) 中创建内核适配请求 开发者可能会为你的内核适配Re:Kernel
+
+## Q / A
+Q: 这个模块会泄露Root吗？
+
+A: 不会，内核模块是无法被检测到的
