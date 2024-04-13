@@ -1,3 +1,6 @@
+# WARNING
+At present, there are some problems in manual integration. It is suggested that we wait until we find a stable solution before integrating ReKernel into your kernel.
+
 # Integrate Re:Kernel for non GKI or QGKI kernels
 First, you should be able to build a bootable kernel from your kernel source code. If the kernel is not open source, this is almost impossible.
 
