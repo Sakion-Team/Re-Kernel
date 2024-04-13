@@ -37,3 +37,7 @@ Re:Kernel has opened a Netlink server that allows all tombstone developers to in
 For users with kernel versions less than or equal to 5.4, we provide a method for users to insert Re:Kernel code into their device's kernel to support Re:Kernel (Check [Integrate](https://github.com/Sakion-Team/Re-Kernel/blob/main/Integrate/README.md)). However, you should be able to build a bootable kernel from your kernel source code. If the kernel is not open source, this is almost impossible.
 
 Of course, if your kernel is open-source, you can also try [Issues](https://github.com/Sakion-Team/Re-Kernel/issues) Creating kernel adaptation requests in may cause developers to integrate Re:Kernel to your kernel.
+
+## Q / A
+Q: Will this module leak Root?
+A: No, the kernel module cannot be detected.
