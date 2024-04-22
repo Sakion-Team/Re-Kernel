@@ -6,6 +6,9 @@ First, you should be able to build a bootable kernel from your kernel source cod
 
 If you have made the above preparations, you can integrate Re:Kernel into your kernel as follows
 
+## Automatically modify with Kernel Modifier
+Firstly, you need to download and place the Kernel Modifier in the root directory of the kernel source code, Then run the Kernel modifier using Java version 17 and above. If nothing unexpected happens, the modifier will automatically modify the kernel source code and insert ReKernel into your kernel. Next, you only need to recompile the kernel once.
+
 ## Modification
 Firstly, you should create a header or source file to store the NETLINK code, with a UNIT of 26, a port of 100, and a packet size of 128
 ```C++
