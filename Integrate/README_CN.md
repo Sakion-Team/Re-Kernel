@@ -229,7 +229,7 @@ static struct binder_buffer *binder_alloc_new_buf_locked(
 				int is_async,
 				int pid)
 {
-+	struct task_struct *p = NULL;
++	struct task_struct *proc_task = NULL;
 	struct rb_node *n = alloc->free_buffers.rb_node;
 	struct binder_buffer *buffer;
 	size_t buffer_size;
@@ -267,16 +267,17 @@ static struct binder_buffer *binder_alloc_new_buf_locked(
 	}
 +	if (is_async
 +		&& (alloc->free_async_space < 3 * (size + sizeof(struct binder_buffer))
-+		|| (alloc->free_async_space < 100 * 1024))) {
++		|| (alloc->free_async_space < ((alloc->buffer_size / 2) * 9 / 10)))) {
 +		rcu_read_lock();
-+		p = find_task_by_vpid(alloc->pid);
++		proc_task = find_task_by_vpid(alloc->pid);
 +		rcu_read_unlock();
-+		if (p != NULL)
-+   			if (start_rekernel_server() == 0) {
++		if (proc_task != NULL && start_rekernel_server() == 0) {
++			if (line_is_frozen(proc_task)) {
 +     				char binder_kmsg[PACKET_SIZE];
-+                       	snprintf(binder_kmsg, sizeof(binder_kmsg), "type=Binder,bindertype=free_buffer_full,oneway=1,from_pid=%d,from=%d,target_pid=%d,target=%d;", current->pid, task_uid(current).val, p->pid, task_uid(p).val);
++                       	snprintf(binder_kmsg, sizeof(binder_kmsg), "type=Binder,bindertype=free_buffer_full,oneway=1,from_pid=%d,from=%d,target_pid=%d,target=%d;", current->pid, task_uid(current).val, proc_task->pid, task_uid(proc_task).val);
 +         			send_netlink_message(binder_kmsg, strlen(binder_kmsg));
-+   			}
++			}
++		}
 +	}
 	if (is_async &&
 	    alloc->free_async_space < size + sizeof(struct binder_buffer)) {
