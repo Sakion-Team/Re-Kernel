@@ -21,6 +21,8 @@
 #define PACKET_SIZE 				128
 #define MIN_USERAPP_UID 			(10000)
 #define MAX_SYSTEM_UID  			(2000)
+#define RESERVE_ORDER				17
+#define WARN_AHEAD_SPACE			(1 << RESERVE_ORDER)
 
 struct sock *rekernel_netlink = NULL;
 extern struct net init_net;
@@ -267,7 +269,7 @@ static struct binder_buffer *binder_alloc_new_buf_locked(
 	}
 +	if (is_async
 +		&& (alloc->free_async_space < 3 * (size + sizeof(struct binder_buffer))
-+		|| (alloc->free_async_space < ((alloc->buffer_size / 2) * 9 / 10)))) {
++		|| (alloc->free_async_space < WARN_AHEAD_SPACE)) {
 +		rcu_read_lock();
 +		proc_task = find_task_by_vpid(alloc->pid);
 +		rcu_read_unlock();
