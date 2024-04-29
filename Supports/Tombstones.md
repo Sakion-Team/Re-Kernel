@@ -3,3 +3,4 @@
 | :-: | :-: | :-: | :-: | :-: | :-: |
 | Freezer | After Next(250) | ANY | Timeline | [Link](https://freezer.sakion.top) | N/A |
 | NoActive | After Pro(55) | ANY | myflavor | [Link](https://app.myflv.cn) | N/A |
+| FreezeIt | After 3.1 Alpha | ANY | JARK006 | [Link](https://jark006.gitee.io/i/freezeit/) | [Module](https://github.com/jark006/freezeitVS) [Manager](https://github.com/jark006/freezeitapp) |
