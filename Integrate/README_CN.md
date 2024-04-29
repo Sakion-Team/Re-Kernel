@@ -19,10 +19,17 @@
 #define NETLINK_REKERNEL_MIN     		22
 #define USER_PORT        			100
 #define PACKET_SIZE 				128
+#define MIN_USERAPP_UID 			(10000)
+#define MAX_SYSTEM_UID  			(2000)
 
 struct sock *rekernel_netlink = NULL;
 extern struct net init_net;
 int netlink_unit = NETLINK_REKERNEL_MIN;
+
+static inline bool line_is_frozen(struct task_struct *task)
+{
+    return frozen(task->group_leader) || freezing(task->group_leader);
+}
 
 static int send_netlink_message(char *msg, uint16_t len) {
     struct sk_buff *skbuffer;
@@ -126,9 +133,16 @@ static void binder_transaction(struct binder_proc *proc,
 		target_proc->tmp_ref++;
 		binder_inner_proc_unlock(target_thread->proc);
 +   		if (start_rekernel_server() == 0) {
-+     			char binder_kmsg[PACKET_SIZE];
-+                       snprintf(binder_kmsg, sizeof(binder_kmsg), "type=Binder,bindertype=reply,oneway=0,from_pid=%d,from=%d,target_pid=%d,target=%d;", proc->pid, task_uid(proc->tsk).val, target_proc->pid, task_uid(target_proc->tsk).val);
-+         		send_netlink_message(binder_kmsg, strlen(binder_kmsg));
++			if (target_proc
++				&& (NULL != target_proc->tsk)
++				&& (NULL != proc->tsk)
++				&& (task_uid(target_proc->tsk).val <= MAX_SYSTEM_UID)
++				&& (proc->pid != target_proc->pid)
++				&& line_is_frozen(target_proc->tsk)) {
++     				char binder_kmsg[PACKET_SIZE];
++                       	snprintf(binder_kmsg, sizeof(binder_kmsg), "type=Binder,bindertype=reply,oneway=0,from_pid=%d,from=%d,target_pid=%d,target=%d;", proc->pid, task_uid(proc->tsk).val, target_proc->pid, task_uid(target_proc->tsk).val);
++         			send_netlink_message(binder_kmsg, strlen(binder_kmsg));
++			}
 +   		}
 	} else {
 		if (tr->target.handle) {
@@ -183,9 +197,16 @@ static void binder_transaction(struct binder_proc *proc,
 		}
 		e->to_node = target_node->debug_id;
 +   		if (start_rekernel_server() == 0) {
-+     			char binder_kmsg[PACKET_SIZE];
-+                       snprintf(binder_kmsg, sizeof(binder_kmsg), "type=Binder,bindertype=transaction,oneway=%d,from_pid=%d,from=%d,target_pid=%d,target=%d;",  tr->flags & TF_ONE_WAY, proc->pid, task_uid(proc->tsk).val, target_proc->pid, task_uid(target_proc->tsk).val);
-+         		send_netlink_message(binder_kmsg, strlen(binder_kmsg));
++			if (target_proc
++				&& (NULL != target_proc->tsk)
++				&& (NULL != proc->tsk)
++				&& (task_uid(target_proc->tsk).val > MIN_USERAPP_UID)
++				&& (proc->pid != target_proc->pid)
++				&& line_is_frozen(target_proc->tsk)) {
++     				char binder_kmsg[PACKET_SIZE];
++                       	snprintf(binder_kmsg, sizeof(binder_kmsg), "type=Binder,bindertype=transaction,oneway=%d,from_pid=%d,from=%d,target_pid=%d,target=%d;", tr->flags & TF_ONE_WAY, proc->pid, task_uid(proc->tsk).val, target_proc->pid, task_uid(target_proc->tsk).val);
++         			send_netlink_message(binder_kmsg, strlen(binder_kmsg));
++			}
 +   		}
 		if (security_binder_transaction(proc->cred,
 						target_proc->cred) < 0) {
@@ -199,16 +220,121 @@ static void binder_transaction(struct binder_proc *proc,
 }
 ```
 ```C++
+// drivers/android/binder_alloc.c
+static struct binder_buffer *binder_alloc_new_buf_locked(
+				struct binder_alloc *alloc,
+				size_t data_size,
+				size_t offsets_size,
+				size_t extra_buffers_size,
+				int is_async,
+				int pid)
+{
++	struct task_struct *p = NULL;
+	struct rb_node *n = alloc->free_buffers.rb_node;
+	struct binder_buffer *buffer;
+	size_t buffer_size;
+	struct rb_node *best_fit = NULL;
+	void __user *has_page_addr;
+	void __user *end_page_addr;
+	size_t size, data_offsets_size;
+	int ret;
+
+	mmap_read_lock(alloc->vma_vm_mm);
+	if (!binder_alloc_get_vma(alloc)) {
+		mmap_read_unlock(alloc->vma_vm_mm);
+		binder_alloc_debug(BINDER_DEBUG_USER_ERROR,
+				   "%d: binder_alloc_buf, no vma\n",
+				   alloc->pid);
+		return ERR_PTR(-ESRCH);
+	}
+	mmap_read_unlock(alloc->vma_vm_mm);
+
+	data_offsets_size = ALIGN(data_size, sizeof(void *)) +
+		ALIGN(offsets_size, sizeof(void *));
+
+	if (data_offsets_size < data_size || data_offsets_size < offsets_size) {
+		binder_alloc_debug(BINDER_DEBUG_BUFFER_ALLOC,
+				"%d: got transaction with invalid size %zd-%zd\n",
+				alloc->pid, data_size, offsets_size);
+		return ERR_PTR(-EINVAL);
+	}
+	size = data_offsets_size + ALIGN(extra_buffers_size, sizeof(void *));
+	if (size < data_offsets_size || size < extra_buffers_size) {
+		binder_alloc_debug(BINDER_DEBUG_BUFFER_ALLOC,
+				"%d: got transaction with invalid extra_buffers_size %zd\n",
+				alloc->pid, extra_buffers_size);
+		return ERR_PTR(-EINVAL);
+	}
++	if (is_async
++		&& (alloc->free_async_space < 3 * (size + sizeof(struct binder_buffer))
++		|| (alloc->free_async_space < 100 * 1024))) {
++		rcu_read_lock();
++		p = find_task_by_vpid(alloc->pid);
++		rcu_read_unlock();
++		if (p != NULL)
++   			if (start_rekernel_server() == 0) {
++     				char binder_kmsg[PACKET_SIZE];
++                       	snprintf(binder_kmsg, sizeof(binder_kmsg), "type=Binder,bindertype=free_buffer_full,oneway=1,from_pid=%d,from=%d,target_pid=%d,target=%d;", current->pid, task_uid(current).val, p->pid, task_uid(p).val);
++         			send_netlink_message(binder_kmsg, strlen(binder_kmsg));
++   			}
++	}
+	if (is_async &&
+	    alloc->free_async_space < size + sizeof(struct binder_buffer)) {
+		binder_alloc_debug(BINDER_DEBUG_BUFFER_ALLOC,
+			     "%d: binder_alloc_buf size %zd failed, no async space left\n",
+			      alloc->pid, size);
+		return ERR_PTR(-ENOSPC);
+	}
+
+	/* Pad 0-size buffers so they get assigned unique addresses */
+	size = max(size, sizeof(void *));
+
+	while (n) {
+		buffer = rb_entry(n, struct binder_buffer, rb_node);
+		BUG_ON(!buffer->free);
+		buffer_size = binder_alloc_buffer_size(alloc, buffer);
+
+		if (size < buffer_size) {
+			best_fit = n;
+			n = n->rb_left;
+		} else if (size > buffer_size)
+			n = n->rb_right;
+		else {
+			best_fit = n;
+			break;
+		}
+	}
+	if (best_fit == NULL) {
+		size_t allocated_buffers = 0;
+		size_t largest_alloc_size = 0;
+		size_t total_alloc_size = 0;
+		size_t free_buffers = 0;
+		size_t largest_free_size = 0;
+		size_t total_free_size = 0;
+
+		for (n = rb_first(&alloc->allocated_buffers); n != NULL;
+		     n = rb_next(n)) {
+			buffer = rb_entry(n, struct binder_buffer, rb_node);
+			buffer_size = binder_alloc_buffer_size(alloc, buffer);
+			allocated_buffers++;
+			total_alloc_size += buffer_size;
+			if (buffer_size > largest_alloc_size)
+				largest_alloc_size = buffer_size;
+		}
+........
+}
+```
+```C++
 // kernel/signal.c
 int do_send_sig_info(int sig, struct siginfo *info, struct task_struct *p,
 			bool group)
 {
 	unsigned long flags;
 	int ret = -ESRCH;
-+ 	if (sig == SIGKILL || sig == SIGTERM || sig == SIGABRT || sig == SIGQUIT) {
-+ 		if (start_rekernel_server() == 0) {
++	if (start_rekernel_server() == 0) {
++ 		if (line_is_frozen(current) && (sig == SIGKILL || sig == SIGTERM || sig == SIGABRT || sig == SIGQUIT)) {
 +     			char binder_kmsg[PACKET_SIZE];
-+     			snprintf(binder_kmsg, sizeof(binder_kmsg), "type=Signal,signal=%d,killer=%d,dst=%d;", sig, task_uid(p).val, task_uid(current).val);
++			snprintf(binder_kmsg, sizeof(binder_kmsg), "type=Signal,signal=%d,killer_pid=%d,killer=%d,dst_pid=%d,dst=%d;", sig, task_tgid_nr(p), task_uid(p).val, task_tgid_nr(current), task_uid(current).val);
 +     			send_netlink_message(binder_kmsg, strlen(binder_kmsg));
 + 		}
 + 	}
@@ -222,8 +348,10 @@ int do_send_sig_info(int sig, struct siginfo *info, struct task_struct *p,
 ```
 主要修改两个地方：
 
-binder_transaction，通常位于 drivers/android/binder.c
+binder_transaction，通常位于 `drivers/android/binder.c`
 
-do_send_sig_info，通常位于 kernel/signal.c
+binder_alloc_new_buf_locked，通常位于 `drivers/android/binder_alloc.c`
+
+do_send_sig_info，通常位于 `kernel/signal.c`
 
 改完之后重新编译内核，Re:Kernel将会融入你的内核当中。
