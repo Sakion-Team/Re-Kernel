@@ -269,7 +269,7 @@ static struct binder_buffer *binder_alloc_new_buf_locked(
 	}
 +	if (is_async
 +		&& (alloc->free_async_space < 3 * (size + sizeof(struct binder_buffer))
-+		|| (alloc->free_async_space < WARN_AHEAD_SPACE)) {
++		|| (alloc->free_async_space < WARN_AHEAD_SPACE))) {
 +		rcu_read_lock();
 +		proc_task = find_task_by_vpid(alloc->pid);
 +		rcu_read_unlock();
