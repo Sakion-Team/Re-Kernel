@@ -19,6 +19,8 @@ import nep.timeline.freezer.core.utils.StringUtils;
 
 public class ReKernel {
     private static boolean isRunning = false;
+    public static boolean received = false;
+    private static final int NETLINK_UNIT_DEFAULT = 22;
 
     // You should create a new thread to invoke this method
     public static void start() {
@@ -74,6 +76,10 @@ public class ReKernel {
                     ByteBuffer byteBuffer = netlinkClient.recvMessage();
                     String data = new String(byteBuffer.array(), byteBuffer.position(), byteBuffer.limit(), StandardCharsets.UTF_8);
                     if (!data.isEmpty()) {
+                        if (data.contains("type=") && !received) {
+                            Log.i("Successfully received message from re:kernel");
+                            received = true;
+                        }
                         String type = StringUtils.getSubString(data, "type=", ",").trim();
                         if (type.equals("Binder")) {
                             String bindertype = StringUtils.getSubString(data, "bindertype=", ",").trim();
