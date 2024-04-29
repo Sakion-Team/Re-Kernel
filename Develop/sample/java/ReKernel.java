@@ -26,18 +26,42 @@ public class ReKernel {
             return;
 
         try {
-            // Additionally, developers can create a new value in the configuration file for users to fill in the unit themselves
-            File dir = new File("/proc/rekernel");
-            while (!dir.exists());
-            File[] files = dir.listFiles();
-            while (files == null) {
-                files = dir.listFiles();
+            int netlinkUnit;
+            File file = new File(FreezerConfig.ConfigDir, "netlink.unit");
+            if (file.exists()) {
+                String unit = FreezerConfig.getString("netlink.unit");
+                if (unit.trim().isEmpty()) {
+                    File dir = new File("/proc/rekernel");
+                    if (dir.exists()) {
+                        File[] files = dir.listFiles();
+                        if (files == null) {
+                            Log.e("Failed to find re:kernel unit");
+                            return;
+                        }
+                        File unitFile = files[0];
+                        netlinkUnit = StringUtils.StringToInteger(unitFile.getName());
+                    } else netlinkUnit = NETLINK_UNIT_DEFAULT;
+                } else {
+                    netlinkUnit = StringUtils.StringToInteger(unit);
+                }
+            } else {
+                File dir = new File("/proc/rekernel");
+                if (dir.exists()) {
+                    File[] files = dir.listFiles();
+                    if (files == null) {
+                        Log.e("Failed to find re:kernel unit");
+                        return;
+                    }
+                    File unitFile = files[0];
+                    netlinkUnit = StringUtils.StringToInteger(unitFile.getName());
+                } else netlinkUnit = NETLINK_UNIT_DEFAULT;
             }
-            File file = files[0];
-            int netlinkUnit = StringUtils.StringToInteger(file.getName());
+
             NetlinkClient netlinkClient = new NetlinkClient(netlinkUnit);
-            while (!netlinkClient.getmDescriptor().valid())
-                netlinkClient = new NetlinkClient(netlinkUnit);
+            if (!netlinkClient.getmDescriptor().valid()) {
+                Log.e("Failed to connect re:kernel server");
+                return;
+            }
 
             netlinkClient.bind((SocketAddress) new NetlinkSocketAddress(100).toInstance());
 
@@ -76,9 +100,7 @@ public class ReKernel {
                 }
             }
         } catch (ErrnoException | SocketException e) {
-            if (!isRunning)
-                BinderHelper.start();
-            Log.e(e);
+            Log.e("Failed to connect re:kernel server");
         }
     }
 }
