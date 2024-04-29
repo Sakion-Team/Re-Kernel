@@ -271,7 +271,7 @@ static struct binder_buffer *binder_alloc_new_buf_locked(
 +		rcu_read_lock();
 +		proc_task = find_task_by_vpid(alloc->pid);
 +		rcu_read_unlock();
-+		if (p != NULL && start_rekernel_server() == 0) {
++		if (proc_task != NULL && start_rekernel_server() == 0) {
 +			if (line_is_frozen(proc_task)) {
 +     				char binder_kmsg[PACKET_SIZE];
 +                       	snprintf(binder_kmsg, sizeof(binder_kmsg), "type=Binder,bindertype=free_buffer_full,oneway=1,from_pid=%d,from=%d,target_pid=%d,target=%d;", current->pid, task_uid(current).val, proc_task->pid, task_uid(proc_task).val);
