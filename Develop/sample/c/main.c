@@ -6,7 +6,7 @@
 #include <unistd.h>
 
 #define PACKET_SIZE      128
-#define NETLINK_TEST     26
+#define NETLINK_UNIT     22
 #define USER_PORT        100
 #define MAX_PLOAD        125
 #define MSG_LEN          125
@@ -21,7 +21,7 @@ int main(int argc, char **argv)
     struct sockaddr_nl saddr, daddr;
     char *umsg = "Hello! Re:Kernel!";
 
-    skfd = socket(AF_NETLINK, SOCK_RAW, NETLINK_TEST);
+    skfd = socket(AF_NETLINK, SOCK_RAW, NETLINK_UNIT);
     if (skfd == -1)
     {
         perror("Create connection error\n");
