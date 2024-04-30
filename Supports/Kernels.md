@@ -30,6 +30,6 @@
 | Voyager | 5.10.x | The Voyager | (✔) | QQ: 652361723 | N/A |
 | Voyager | 4.x | The Voyager | (?) | QQ: 652361723 | N/A |
 
-如果你的内核与ReKernel不兼容 说明开发者对内核修改严重，破坏了GKI内核规范
+如果你的GKI内核与ReKernel不兼容 说明开发者对内核修改严重，破坏了GKI内核规范
 
-若你正在使用与ReKernel不兼容的内核 你应当与内核开发者进行联系 而不是ReKernel开发者 或者使用官方内核而不是第三方内核
+若你正在使用与ReKernel不兼容的GKI内核 你应当与内核开发者进行联系 而不是ReKernel开发者 或者使用官方内核而不是第三方内核
