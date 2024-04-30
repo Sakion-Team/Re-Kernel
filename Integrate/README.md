@@ -35,7 +35,7 @@ static inline bool line_is_jobctl_frozen(struct task_struct *task)
 
 static inline bool line_is_frozen(struct task_struct *task)
 {
-    return ((cgroup_task_frozen(task) && line_is_jobctl_frozen(task)) || frozen(task->group_leader) || freezing(task->group_leader);
+    return (cgroup_task_frozen(task) && line_is_jobctl_frozen(task)) || frozen(task->group_leader) || freezing(task->group_leader);
 }
 
 static int send_netlink_message(char *msg, uint16_t len) {
