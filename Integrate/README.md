@@ -23,8 +23,6 @@ Firstly, you should create a header or source file to store the NETLINK code, wi
 #define MAX_SYSTEM_UID  			(2000)
 #define RESERVE_ORDER				17
 #define WARN_AHEAD_SPACE			(1 << RESERVE_ORDER)
-#define LINE_JOBCTL_TRAP_FREEZE_BIT 		23
-#define LINE_JOBCTL_TRAP_FREEZE 		(1UL << LINE_JOBCTL_TRAP_FREEZE_BIT)
 
 struct sock *rekernel_netlink = NULL;
 extern struct net init_net;
@@ -37,7 +35,7 @@ static inline bool line_is_jobctl_frozen(struct task_struct *task)
 
 static inline bool line_is_frozen(struct task_struct *task)
 {
-    return (cgroup_task_frozen(task) && line_is_jobctl_frozen(task)) || frozen(task->group_leader) || freezing(task->group_leader);
+    return frozen(task->group_leader) || freezing(task->group_leader);
 }
 
 static int send_netlink_message(char *msg, uint16_t len) {
