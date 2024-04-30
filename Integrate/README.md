@@ -28,11 +28,6 @@ struct sock *rekernel_netlink = NULL;
 extern struct net init_net;
 int netlink_unit = NETLINK_REKERNEL_MIN;
 
-static inline bool line_is_jobctl_frozen(struct task_struct *task)
-{
-    return ((task->jobctl & LINE_JOBCTL_TRAP_FREEZE) != 0);
-}
-
 static inline bool line_is_frozen(struct task_struct *task)
 {
     return frozen(task->group_leader) || freezing(task->group_leader);
