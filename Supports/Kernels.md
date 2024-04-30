@@ -14,7 +14,7 @@
 | Kernel Patch | N/A | 5.4 | 4.5 | [Download](https://github.com/lzghzr/APatch_kpm/releases/download/1.0.0/re_kernel_1.3.6.1.kpm) | [Link](https://github.com/lzghzr/APatch_kpm/tree/main/re_kernel) | ✔ | ✔ |
 | Kernel Patch | N/A | 5.10 | 4.5 | [Download](https://github.com/lzghzr/APatch_kpm/releases/download/1.0.0/re_kernel_1.3.6.1.kpm) | [Link](https://github.com/lzghzr/APatch_kpm/tree/main/re_kernel) | ✔ | ✔ |
 
-## 内核模块兼容性追踪 | Kernel module compatibility tracking
+## 内核兼容性追踪 | Kernel compatibility tracking
 (✘) - 不兼容 | Incompatible
 
 (?) - 未知 | Unknown
