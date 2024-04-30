@@ -28,9 +28,14 @@ struct sock *rekernel_netlink = NULL;
 extern struct net init_net;
 int netlink_unit = NETLINK_REKERNEL_MIN;
 
+static inline bool line_is_jobctl_frozen(struct task_struct *task)
+{
+    return ((task->jobctl & JOBCTL_TRAP_FREEZE) != 0);
+}
+
 static inline bool line_is_frozen(struct task_struct *task)
 {
-    return frozen(task->group_leader) || freezing(task->group_leader);
+    return ((cgroup_task_frozen(task) && line_is_jobctl_frozen(task)) || frozen(task->group_leader) || freezing(task->group_leader);
 }
 
 static int send_netlink_message(char *msg, uint16_t len) {
@@ -83,7 +88,7 @@ static const struct file_operations rekernel_unit_fops = {
 static struct proc_dir_entry *rekernel_dir, *rekernel_unit_entry;
 
 static int start_rekernel_server(void) {
-  if (rekernel_netlink)
+  if (rekernel_netlink != NULL)
     return 0;
   for (netlink_unit = NETLINK_REKERNEL_MIN; netlink_unit < NETLINK_REKERNEL_MAX; netlink_unit++) {
     rekernel_netlink = (struct sock *)netlink_kernel_create(&init_net, netlink_unit, &rekernel_cfg);
