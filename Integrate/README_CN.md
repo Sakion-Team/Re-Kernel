@@ -30,7 +30,7 @@ int netlink_unit = NETLINK_REKERNEL_MIN;
 
 static inline bool line_is_frozen(struct task_struct *task)
 {
-    return frozen(task->group_leader) || freezing(task->group_leader);
+    return frozen(task) || freezing(task);
 }
 
 static int send_netlink_message(char *msg, uint16_t len) {
