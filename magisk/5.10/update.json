@@ -1,6 +1,6 @@
 {
-  "version": "v4.5",
-  "versionCode": 45,
-  "zipUrl": "https://github.com/Sakion-Team/Re-Kernel/releases/download/releases/Re-Kernel-v4.5-5.10.zip",
+  "version": "v5.0",
+  "versionCode": 50,
+  "zipUrl": "https://github.com/Sakion-Team/Re-Kernel/releases/download/releases/Re-Kernel-v5.0-5.10.zip",
   "changelog": "https://raw.githubusercontent.com/Sakion-Team/Re-Kernel/main/magisk/5.15/update.md"
 }
