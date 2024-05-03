@@ -9,7 +9,7 @@
 ### WARNING: The inclusion of the kernel does not mean that the kernel source code has been reviewed by the Sakion Team, any issues arising shall be borne by the user.
 | Device | Android version | Kernel version | Re:Kernel version | Link | Kernel source code | Binder | Signal |
 | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: |
-| Kernel Patch | N/A | 4.4-5.15 | 5.0 | [Download](https://github.com/lzghzr/APatch_kpm/releases/download/1.0.0/re_kernel_1.3.6.4.kpm) | [Link](https://github.com/lzghzr/APatch_kpm/tree/main/re_kernel) | ✔ | ✔ |
+| Kernel Patch | N/A | 4.4-5.15 | 5.0 | [Download](https://github.com/lzghzr/APatch_kpm/releases/download/1.0.0/re_kernel_1.4.0.0.kpm) | [Link](https://github.com/lzghzr/APatch_kpm/tree/main/re_kernel) | ✔ | ✔ |
 
 ## 内核兼容性追踪 | Kernel compatibility tracking
 (✘) - 不兼容 | Incompatible
