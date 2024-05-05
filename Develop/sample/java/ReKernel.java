@@ -98,7 +98,7 @@ public class ReKernel {
                             int targetUid = StringUtils.StringToInteger(StringUtils.getSubString(data, "dst=", ";"));
                             // Your code
                         } else if (type.equals("Network")) {
-                            int targetUid = StringUtils.StringToInteger(StringUtils.getSubString(data, "uid=", ";"));
+                            int targetUid = StringUtils.StringToInteger(StringUtils.getSubString(data, "target=", ";"));
                             // Your code
                         }
                     }
