@@ -97,6 +97,9 @@ public class ReKernel {
                             int targetPid = StringUtils.StringToInteger(StringUtils.getSubString(data, "dst_pid=", ","));
                             int targetUid = StringUtils.StringToInteger(StringUtils.getSubString(data, "dst=", ";"));
                             // Your code
+                        } else if (type.equals("Network")) {
+                            int targetUid = StringUtils.StringToInteger(StringUtils.getSubString(data, "uid=", ";"));
+                            // Your code
                         }
                     }
                 } catch (ErrnoException | InterruptedIOException | NumberFormatException ignored) {
