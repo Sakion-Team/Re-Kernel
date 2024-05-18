@@ -5,6 +5,9 @@
 
 Make tombstone users get a better experience. ([简体中文](README_CN.md))
 
+## License
+This project is using a [GPL License](LICENSE), If you need to modify or redistribute this project, please also keep it open source.
+
 ## Downloading
 Find your device kernel from the [list of supported devices](https://github.com/Sakion-Team/Re-Kernel/tree/main/Supports), and download it.
 
