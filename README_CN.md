@@ -5,6 +5,9 @@
 
 使墓碑用户获得更好的使用体验。
 
+## 许可
+此项目正在使用 [GPL 许可证](LICENSE), 如果需要对此项目进行修改或二次分发，请同样保持开源。
+
 ## 下载内核
 在 [Re:Kernel已适配机型列表](https://github.com/Sakion-Team/Re-Kernel/tree/main/Supports) 中寻找你设备的内核并下载
 
