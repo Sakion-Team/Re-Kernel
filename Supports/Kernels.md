@@ -17,15 +17,15 @@
 (?) - 未知 | Unknown
 
 (✔) - 兼容 | Compatible
-| Kernel | Kernel version | Developer | Compatibility | Link | Kernel source code |
-| :-: | :-: | :-: | :-: | :-: | :-: |
-| AngelBeats | 6.1.x | hamjin | (✔) | [Link](https://t.me/pandora_kernel_release) | N/A |
-| Yuni | 5.15.x | hamjin | (✔) | [Link](https://t.me/pandora_kernel_release) | N/A |
-| Pandora | 5.10.x | hamjin | (✔) VER > 24.03.30 | [Link](https://t.me/pandora_kernel_release) | N/A |
-| Voyager | 6.1.x | The Voyager | (✔) | QQ: 652361723 | N/A |
-| Voyager | 5.15.x | The Voyager | (✔) | QQ: 652361723 | N/A |
-| Voyager | 5.10.x | The Voyager | (✔) | QQ: 652361723 | N/A |
-| Voyager | 4.x | The Voyager | (✔) | QQ: 652361723 | N/A |
+| Device | Android version | Kernel | Kernel version | Developer | Compatibility | Link | Kernel source code |
+| :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: |
+| GKI | UPSIDE_DOWN_CAKE | AngelBeats | 6.1.x | hamjin | (✔) | [Link](https://t.me/pandora_kernel_release) | N/A |
+| GKI | TIRAMISU | Yuni | 5.15.x | hamjin | (✔) | [Link](https://t.me/pandora_kernel_release) | N/A |
+| GKI | Android S | Pandora | 5.10.x | hamjin | (✔) VER > 24.03.30 | [Link](https://t.me/pandora_kernel_release) | N/A |
+| GKI | UPSIDE_DOWN_CAKE | Voyager | 6.1.x | The Voyager | (✔) | QQ: 652361723 | N/A |
+| GKI | TIRAMISU | Voyager | 5.15.x | The Voyager | (✔) | QQ: 652361723 | N/A |
+| GKI | Android S | Voyager | 5.10.x | The Voyager | (✔) | QQ: 652361723 | N/A |
+| GKI | ONLY XIAOMI/REDMI | Voyager | 4.x | The Voyager | (✔) | QQ: 652361723 | N/A |
 
 如果你的GKI内核与ReKernel不兼容 说明开发者对内核修改严重，破坏了GKI内核规范
 
