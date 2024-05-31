@@ -1,5 +1,5 @@
 ## 由咲音团队编译的内核文件 | Kernel files compiled by Sakion Team
-| Device | Android version | Kernel version | Re:Kernel version | Link | Kernel source code | Binder | Signal |
+| Device | Kernel android version | Kernel version | Re:Kernel version | Link | Kernel source code | Binder | Signal |
 | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: |
 | GKI | UPSIDE_DOWN_CAKE | 6.1.x | 6.0 | [Download](https://www.123pan.com/s/h1szVv-9mv4H.html) | [Link](https://github.com/Sakion-Team/Re-Kernel/tree/main/LKM-Source) | ✔ | ✔ |
 | GKI | TIRAMISU | 5.15.x | 6.0 | [Download](https://www.123pan.com/s/h1szVv-9mv4H.html) | [Link](https://github.com/Sakion-Team/Re-Kernel/tree/main/LKM-Source) | ✔ | ✔ |
@@ -7,7 +7,7 @@
 ## 由第三方开发者编译的内核文件 | Kernel files compiled by third-party developers
 ### 警告: 内核被收录并不代表内核源代码受到咲音团队审查，出现任何问题由用户自行承担。
 ### WARNING: The inclusion of the kernel does not mean that the kernel source code has been reviewed by the Sakion Team, any issues arising shall be borne by the user.
-| Device | Android version | Kernel version | Re:Kernel version | Link | Kernel source code | Binder | Signal |
+| Device | Kernel android version | Kernel version | Re:Kernel version | Link | Kernel source code | Binder | Signal |
 | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: |
 | Kernel Patch | N/A | 4.4-5.15 | 6.0 | [Download](https://github.com/lzghzr/APatch_kpm/releases/download/2024052900/re_kernel_6.0.1_network.kpm) | [Link](https://github.com/lzghzr/APatch_kpm/tree/main/re_kernel) | ✔ | ✔ |
 
@@ -17,7 +17,7 @@
 (?) - 未知 | Unknown
 
 (✔) - 兼容 | Compatible
-| Device | Android version | Kernel | Kernel version | Developer | Compatibility | Link | Kernel source code |
+| Device | Kernel android version | Kernel | Kernel version | Developer | Compatibility | Link | Kernel source code |
 | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: |
 | GKI | UPSIDE_DOWN_CAKE | AngelBeats | 6.1.x | hamjin | (✔) | [Link](https://t.me/pandora_kernel_release) | N/A |
 | GKI | TIRAMISU | Yuni | 5.15.x | hamjin | (✔) | [Link](https://t.me/pandora_kernel_release) | N/A |
