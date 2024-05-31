@@ -25,7 +25,7 @@
 | Voyager | 6.1.x | The Voyager | (✔) | QQ: 652361723 | N/A |
 | Voyager | 5.15.x | The Voyager | (✔) | QQ: 652361723 | N/A |
 | Voyager | 5.10.x | The Voyager | (✔) | QQ: 652361723 | N/A |
-| Voyager | 4.x | The Voyager | (?) | QQ: 652361723 | N/A |
+| Voyager | 4.x | The Voyager | (✔) | QQ: 652361723 | N/A |
 
 如果你的GKI内核与ReKernel不兼容 说明开发者对内核修改严重，破坏了GKI内核规范
 
