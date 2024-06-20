@@ -182,30 +182,6 @@ void line_binder_reply(void *data, struct binder_proc *target_proc, struct binde
 	}
 }
 
-#ifdef KERNEL_6_1
-static long line_copy_from_user_nofault(void *dst, const void __user *src, size_t size)
-{
-	long ret = -EFAULT;
-	if (access_ok(src, size)) {
-		pagefault_disable();
-		ret = __copy_from_user_inatomic(dst, src, size);
-		pagefault_enable();
-	}
-	if (ret)
-		return -EFAULT;
-	return 0;
-}
-#endif
-
-static long line_copy_from_user_compatible(void *dst, const void __user *src, size_t size)
-{
-#ifdef KERNEL_6_1
-	return line_copy_from_user_nofault(dst, src, size);
-#else
-	return copy_from_user(dst, src, size);
-#endif
-}
-
 void line_binder_transaction(void *data, struct binder_proc *target_proc, struct binder_proc *proc,
 	struct binder_thread *thread, struct binder_transaction_data *tr)
 {
@@ -232,6 +208,7 @@ void line_binder_transaction(void *data, struct binder_proc *target_proc, struct
 		}
 	}
 
+	// Async binder is useless for tombstone module
 	if ((tr->flags & TF_ONE_WAY) /* async binder */
 		&& target_proc
 		&& (NULL != target_proc->tsk)
@@ -334,7 +311,7 @@ int register_signal(void)
 
 static inline uid_t line_sock2uid(struct sock *sk)
 {
-	if(sk && sk->sk_socket)
+	if (sk && sk->sk_socket)
 		return SOCK_INODE(sk->sk_socket)->i_uid.val;
 	else
 		return 0;
