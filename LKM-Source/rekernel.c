@@ -216,7 +216,7 @@ void line_signal(void *data, int sig, struct task_struct *killer, struct task_st
 		if (netlink_socket != NULL) {
 			char binder_kmsg[PACKET_SIZE];
 			snprintf(binder_kmsg, sizeof(binder_kmsg), "type=Signal,signal=%d,killer_pid=%d,killer=%d,dst_pid=%d,dst=%d;", sig, task_tgid_nr(killer), task_uid(killer).val, task_tgid_nr(dst), task_uid(dst).val);
-			send_usrmsg(binder_kmsg, strlen(binder_kmsg));
+			sendMessage(binder_kmsg, strlen(binder_kmsg));
 		}
 	}
 }
