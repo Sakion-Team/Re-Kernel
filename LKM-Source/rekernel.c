@@ -43,14 +43,15 @@
 
 #define NETLINK_REKERNEL_MAX     		26
 #define NETLINK_REKERNEL_MIN     		22
-#define USER_PORT        				    100
-#define PACKET_SIZE 					      128
+#define USER_PORT        				100
+#define PACKET_SIZE 					128
 int netlink_count = 0;
 char netlink_kmsg[PACKET_SIZE];
 struct sock *netlink_socket = NULL;
 extern struct net init_net;
 int netlink_unit = NETLINK_REKERNEL_MIN;
 
+/* hashmap for monitored uids */
 #define REKERNEL_UID_HASH_BITS 6
 static DEFINE_HASHTABLE(rekernel_uid_map, REKERNEL_UID_HASH_BITS);
 struct uid_info {
@@ -58,15 +59,16 @@ struct uid_info {
 	struct hlist_node hnode;
 };
 
+/* hashmap for persitent uids */
 #define REKERNEL_P_UID_HASH_BITS 5
 static DEFINE_HASHTABLE(rekernel_p_uid_map, REKERNEL_P_UID_HASH_BITS);
 struct p_uid_info {
 	uid_t uid;
-	unsigned long last_arrival_time;
+	unsigned long last_arrival_time; /* jiffies */
 	struct hlist_node hnode;
 };
 
-spinlock_t rekernel_map_lock;
+spinlock_t rekernel_map_lock; /* two maps use the same spinlock */
 
 static inline bool rekernel_is_frozen_state_compatible(struct task_struct *task)
 {
@@ -141,7 +143,7 @@ void line_binder_alloc_new_buf_locked(void *data, size_t size, struct binder_all
 			if (netlink_socket != NULL) {
 				char binder_kmsg[PACKET_SIZE];
 				snprintf(binder_kmsg, sizeof(binder_kmsg), "type=Binder,bindertype=free_buffer_full,oneway=1,from_pid=%d,from=%d,target_pid=%d,target=%d;", current->pid, task_uid(current).val, p->pid, task_uid(p).val);
-				send_usrmsg(binder_kmsg, strlen(binder_kmsg));
+				sendMessage(binder_kmsg, strlen(binder_kmsg));
 			}
 		}
 	}
@@ -175,27 +177,88 @@ void line_binder_reply(void *data, struct binder_proc *target_proc, struct binde
 		if (netlink_socket != NULL) {
 			char binder_kmsg[PACKET_SIZE];
 			snprintf(binder_kmsg, sizeof(binder_kmsg), "type=Binder,bindertype=reply,oneway=0,from_pid=%d,from=%d,target_pid=%d,target=%d;", proc->pid, task_uid(proc->tsk).val, target_proc->pid, task_uid(target_proc->tsk).val);
-			send_usrmsg(binder_kmsg, strlen(binder_kmsg));
+			sendMessage(binder_kmsg, strlen(binder_kmsg));
 		}
 	}
+}
+
+#ifdef KERNEL_6_1
+static long line_copy_from_user_nofault(void *dst, const void __user *src, size_t size)
+{
+	long ret = -EFAULT;
+	if (access_ok(src, size)) {
+		pagefault_disable();
+		ret = __copy_from_user_inatomic(dst, src, size);
+		pagefault_enable();
+	}
+	if (ret)
+		return -EFAULT;
+	return 0;
+}
+#endif
+
+static long line_copy_from_user_compatible(void *dst, const void __user *src, size_t size)
+{
+#ifdef KERNEL_6_1
+	return line_copy_from_user_nofault(dst, src, size);
+#else
+	return copy_from_user(dst, src, size);
+#endif
 }
 
 void line_binder_transaction(void *data, struct binder_proc *target_proc, struct binder_proc *proc,
 	struct binder_thread *thread, struct binder_transaction_data *tr)
 {
-	if (target_proc
+	char buf_data[INTERFACETOKEN_BUFF_SIZE];
+	size_t buf_data_size;
+	char buf[INTERFACETOKEN_BUFF_SIZE] = {0};
+	int i = 0;
+	int j = 0;
+
+	if (!(tr->flags & TF_ONE_WAY) /* sync binder */
+		&& target_proc
 		&& (NULL != target_proc->tsk)
 		&& (NULL != proc->tsk)
 		&& (task_uid(target_proc->tsk).val > MIN_USERAPP_UID)
 		&& (proc->pid != target_proc->pid)
 		&& line_is_frozen(target_proc->tsk)) {
 #ifdef DEBUG
-		pr_info("[Re-Kernel LKM] Binder Transaction! from=%d | target=%d\n", task_uid(proc->tsk).val, task_uid(target_proc->tsk).val);
+		pr_info("[Re-Kernel LKM] Sync Binder Transaction! from=%d | target=%d\n", task_uid(proc->tsk).val, task_uid(target_proc->tsk).val);
 #endif
 		if (netlink_socket != NULL) {
 			char binder_kmsg[PACKET_SIZE];
-			snprintf(binder_kmsg, sizeof(binder_kmsg), "type=Binder,bindertype=transaction,oneway=%d,from_pid=%d,from=%d,target_pid=%d,target=%d;", tr->flags & TF_ONE_WAY, proc->pid, task_uid(proc->tsk).val, target_proc->pid, task_uid(target_proc->tsk).val);
-			send_usrmsg(binder_kmsg, strlen(binder_kmsg));
+			snprintf(binder_kmsg, sizeof(binder_kmsg), "type=Binder,bindertype=transaction,oneway=0,from_pid=%d,from=%d,target_pid=%d,target=%d;", proc->pid, task_uid(proc->tsk).val, target_proc->pid, task_uid(target_proc->tsk).val);
+			sendMessage(binder_kmsg, strlen(binder_kmsg));
+		}
+	}
+
+	if ((tr->flags & TF_ONE_WAY) /* async binder */
+		&& target_proc
+		&& (NULL != target_proc->tsk)
+		&& (NULL != proc->tsk)
+		&& (task_uid(target_proc->tsk).val > MIN_USERAPP_UID)
+		&& (proc->pid != target_proc->pid)
+		&& line_is_frozen(target_proc->tsk)) {
+		buf_data_size = tr->data_size > INTERFACETOKEN_BUFF_SIZE ? INTERFACETOKEN_BUFF_SIZE : tr->data_size;
+		if (!line_copy_from_user_compatible(buf_data, (char*)tr->data.ptr.buffer, buf_data_size)) {
+			if (buf_data_size > PARCEL_OFFSET) {
+				char *p = (char *)(buf_data) + PARCEL_OFFSET;
+				j = PARCEL_OFFSET + 1;
+				while (i < INTERFACETOKEN_BUFF_SIZE && j < buf_data_size && *p != '\0') {
+					buf[i++] = *p;
+					j += 2;
+					p += 2;
+				}
+				if (i == INTERFACETOKEN_BUFF_SIZE) buf[i-1] = '\0';
+			}
+#ifdef DEBUG
+			pr_info("[Re-Kernel LKM] ASync Binder Transaction! from=%d | target=%d\n", task_uid(proc->tsk).val, task_uid(target_proc->tsk).val);
+#endif
+			if (netlink_socket != NULL) {
+				char binder_kmsg[PACKET_SIZE];
+				snprintf(binder_kmsg, sizeof(binder_kmsg), "type=Binder,bindertype=transaction,oneway=1,from_pid=%d,from=%d,target_pid=%d,target=%d;", proc->pid, task_uid(proc->tsk).val, target_proc->pid, task_uid(target_proc->tsk).val);
+				sendMessage(binder_kmsg, strlen(binder_kmsg));
+			}
 		}
 	}
 }
@@ -271,7 +334,7 @@ int register_signal(void)
 
 static inline uid_t line_sock2uid(struct sock *sk)
 {
-	if (sk && sk->sk_socket)
+	if(sk && sk->sk_socket)
 		return SOCK_INODE(sk->sk_socket)->i_uid.val;
 	else
 		return 0;
@@ -302,7 +365,7 @@ static unsigned int rekernel_pkg_ip4_in(void *priv, struct sk_buff *socket_buffe
 	if (netlink_socket != NULL) {
 		char binder_kmsg[PACKET_SIZE];
 		snprintf(binder_kmsg, sizeof(binder_kmsg), "type=Network,target=%d;", uid);
-		send_usrmsg(binder_kmsg, strlen(binder_kmsg));
+		sendMessage(binder_kmsg, strlen(binder_kmsg));
 	}
 
 	return NF_ACCEPT;
@@ -335,7 +398,7 @@ static unsigned int rekernel_pkg_ip6_in(void *priv, struct sk_buff *socket_buffe
 	if (netlink_socket != NULL) {
 		char binder_kmsg[PACKET_SIZE];
 		snprintf(binder_kmsg, sizeof(binder_kmsg), "type=Network,target=%d;", uid);
-		send_usrmsg(binder_kmsg, strlen(binder_kmsg));
+		sendMessage(binder_kmsg, strlen(binder_kmsg));
 	}
 	
 	return NF_ACCEPT;
@@ -347,6 +410,7 @@ static inline unsigned int rekernel_pkg_ip_out(void *priv, struct sk_buff *socke
 	return NF_ACCEPT;
 }
 
+/* Only monitor input network packages */
 static struct nf_hook_ops rekernel_nf_ops[] = {
 	{
 		.hook     = rekernel_pkg_ip4_in,
@@ -432,7 +496,7 @@ static void netlink_rcv_msg(struct sk_buff *socket_buffer)
         umsg = NLMSG_DATA(nlhdr);
         if (umsg) {
             printk("kernel recv packet from user: %s\n", umsg);
-            send_usrmsg(kmsg, strlen(kmsg));
+            sendMessage(kmsg, strlen(kmsg));
         }
     }
 }
