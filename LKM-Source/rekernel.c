@@ -4,7 +4,7 @@
  * File name: rekernel.c
  * Description: rekernel module
  * Author: nep_timeline@outlook.com
- * Last Modification:  2024/5/18
+ * Last Modification:  2024/06/28
  */
 #include "linux/printk.h"
 #include <linux/module.h>
@@ -263,6 +263,8 @@ void line_binder_transaction(void *data, struct binder_proc *target_proc, struct
 	}
 }
 
+#ifndef KERNEL_5_10
+
 void line_binder_proc_transaction_entry(void* data, struct binder_proc* proc, struct binder_transaction* t,
 	struct binder_thread** thread, int node_debug_id, bool pending_async, bool sync, bool* skip)
 {
@@ -296,6 +298,8 @@ void line_binder_transaction_finish(void* data, struct binder_proc* proc, struct
 		proc->sync_recv = false;
 	}
 }
+
+#endif
 
 void line_signal(void *data, int sig, struct task_struct *killer, struct task_struct *dst)
 {
@@ -341,6 +345,7 @@ int register_binder(void)
 		pr_err("register_trace_android_vh_binder_trans failed, rc=%d\n", rc);
 		return rc;
 	}
+#ifndef KERNEL_5_10
 	rc = register_trace_android_vh_binder_proc_transaction_entry(line_binder_proc_transaction_entry, NULL);
 	if (rc != LINE_SUCCESS) {
 		pr_err("register_trace_android_vh_binder_proc_transaction_entry failed, rc=%d\n", rc);
@@ -351,7 +356,7 @@ int register_binder(void)
 		pr_err("register_trace_android_vh_binder_proc_transaction_finish failed, rc=%d\n", rc);
 		return rc;
 	}
-
+#endif
 	return LINE_SUCCESS;
 }
 
@@ -361,8 +366,10 @@ void unregister_binder(void)
 	unregister_trace_android_vh_binder_preset(line_binder_preset, NULL);
 	unregister_trace_android_vh_binder_reply(line_binder_reply, NULL);
 	unregister_trace_android_vh_binder_trans(line_binder_transaction, NULL);
+#ifndef KERNEL_5_10
 	unregister_trace_android_vh_binder_proc_transaction_entry(line_binder_proc_transaction_entry, NULL);
 	unregister_trace_android_vh_binder_proc_transaction_finish(line_binder_transaction_finish, NULL);
+#endif
 }
 
 int register_signal(void)
