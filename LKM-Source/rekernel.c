@@ -264,6 +264,29 @@ void line_binder_transaction(void *data, struct binder_proc *target_proc, struct
 	}
 }
 
+void line_binder_proc_transaction_entry(void* data, struct binder_proc* proc, struct binder_transaction* t,
+	struct binder_thread** thread, int node_debug_id, bool pending_async, bool sync, bool* skip)
+{
+	if (proc->is_frozen) {
+		t->flags |= TF_UPDATE_TXN;
+		return;
+	}
+	if (!sync && line_is_frozen(proc->tsk)) {
+		t->flags |= TF_UPDATE_TXN;
+		proc->is_frozen = true;
+		proc->sync_recv = true;
+	}
+}
+
+void line_binder_transaction_finish(void* data, struct binder_proc* proc, struct binder_transaction* t,
+	struct task_struct* binder_th_task, bool pending_async, bool sync)
+{
+	if (!sync && proc->sync_recv == true) {
+		proc->is_frozen = false;
+		proc->sync_recv = false;
+	}
+}
+
 void line_signal(void *data, int sig, struct task_struct *killer, struct task_struct *dst)
 {
 	if (!dst || !killer)
@@ -308,6 +331,16 @@ int register_binder(void)
 		pr_err("register_trace_android_vh_binder_trans failed, rc=%d\n", rc);
 		return rc;
 	}
+	rc = register_trace_android_vh_binder_proc_transaction_entry(line_binder_proc_transaction_entry, NULL);
+	if (rc != LINE_SUCCESS) {
+		pr_err("register_trace_android_vh_binder_proc_transaction_entry failed, rc=%d\n", rc);
+		return rc;
+	}
+	rc = register_trace_android_vh_binder_proc_transaction_finish(line_binder_transaction_finish, NULL);
+	if (rc != LINE_SUCCESS) {
+		pr_err("register_trace_android_vh_binder_proc_transaction_finish failed, rc=%d\n", rc);
+		return rc;
+	}
 
 	return LINE_SUCCESS;
 }
@@ -318,6 +351,8 @@ void unregister_binder(void)
 	unregister_trace_android_vh_binder_preset(line_binder_preset, NULL);
 	unregister_trace_android_vh_binder_reply(line_binder_reply, NULL);
 	unregister_trace_android_vh_binder_trans(line_binder_transaction, NULL);
+	unregister_trace_android_vh_binder_proc_transaction_entry(line_binder_proc_transaction_entry, NULL);
+	unregister_trace_android_vh_binder_proc_transaction_finish(line_binder_transaction_finish, NULL);
 }
 
 int register_signal(void)
