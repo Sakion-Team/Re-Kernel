@@ -380,7 +380,7 @@ int register_signal(void)
 
 static inline uid_t line_sock2uid(struct sock *sk)
 {
-	if(sk && sk->sk_socket)
+	if (sk && sk->sk_socket)
 		return SOCK_INODE(sk->sk_socket)->i_uid.val;
 	else
 		return 0;
@@ -577,7 +577,7 @@ static int __init start_rekernel(void)
 #ifdef DEBUG
 	pr_info("Debug mode is enabled!\n");
 #endif
-	pr_info("Re:Kernel v6.0 | DEVELOPER: Sakion Team | Timeline | USER PORT: %d\n", USER_PORT);
+	pr_info("Re:Kernel v6.5 | DEVELOPER: Sakion Team | Timeline | USER PORT: %d\n", USER_PORT);
 	pr_info("Trying to create Re:Kernel Server......\n");
 
 	for (netlink_unit = NETLINK_REKERNEL_MIN; netlink_unit < NETLINK_REKERNEL_MAX; netlink_unit++) {
