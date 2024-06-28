@@ -232,7 +232,6 @@ void line_binder_transaction(void *data, struct binder_proc *target_proc, struct
 		}
 	}
 
-	// Async binder is useless for tombstone module
 	if ((tr->flags & TF_ONE_WAY) /* async binder */
 		&& target_proc
 		&& (NULL != target_proc->tsk)
@@ -270,10 +269,16 @@ void line_binder_proc_transaction_entry(void* data, struct binder_proc* proc, st
 	if (sync)
 		return;
 	if (proc->is_frozen) {
+#ifdef DEBUG
+		pr_info("[Re-Kernel LKM] Filter Binder! proc=%d\n", task_uid(proc->tsk).val);
+#endif
 		t->flags |= TF_UPDATE_TXN;
 		return;
 	}
 	if (line_is_frozen(proc->tsk)) {
+#ifdef DEBUG
+		pr_info("[Re-Kernel LKM] Filter Binder! proc=%d\n", task_uid(proc->tsk).val);
+#endif
 		t->flags |= TF_UPDATE_TXN;
 		proc->is_frozen = true;
 		proc->sync_recv = true;
@@ -283,7 +288,10 @@ void line_binder_proc_transaction_entry(void* data, struct binder_proc* proc, st
 void line_binder_transaction_finish(void* data, struct binder_proc* proc, struct binder_transaction* t,
 	struct task_struct* binder_th_task, bool pending_async, bool sync)
 {
-	if (!sync && proc->sync_recv == true) {
+	if (!sync && proc->sync_recv) {
+#ifdef DEBUG
+		pr_info("[Re-Kernel LKM] Filter Binder! proc=%d\n", task_uid(proc->tsk).val);
+#endif
 		proc->is_frozen = false;
 		proc->sync_recv = false;
 	}
@@ -372,7 +380,7 @@ int register_signal(void)
 
 static inline uid_t line_sock2uid(struct sock *sk)
 {
-	if (sk && sk->sk_socket)
+	if(sk && sk->sk_socket)
 		return SOCK_INODE(sk->sk_socket)->i_uid.val;
 	else
 		return 0;
