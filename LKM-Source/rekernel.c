@@ -267,11 +267,13 @@ void line_binder_transaction(void *data, struct binder_proc *target_proc, struct
 void line_binder_proc_transaction_entry(void* data, struct binder_proc* proc, struct binder_transaction* t,
 	struct binder_thread** thread, int node_debug_id, bool pending_async, bool sync, bool* skip)
 {
+	if (sync)
+		return;
 	if (proc->is_frozen) {
 		t->flags |= TF_UPDATE_TXN;
 		return;
 	}
-	if (!sync && line_is_frozen(proc->tsk)) {
+	if (line_is_frozen(proc->tsk)) {
 		t->flags |= TF_UPDATE_TXN;
 		proc->is_frozen = true;
 		proc->sync_recv = true;
