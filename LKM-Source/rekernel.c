@@ -497,13 +497,7 @@ static struct nf_hook_ops rekernel_nf_ops[] = {
 
 void unregister_signal(void)
 {
-	struct net *net;
-
-	rtnl_lock();
-	for_each_net(net) {
-		nf_unregister_net_hooks(net, rekernel_nf_ops, ARRAY_SIZE(rekernel_nf_ops));
-	}
-	rtnl_unlock();
+	unregister_trace_android_vh_do_send_sig_info(line_signal, NULL);
 }
 
 int register_netfilter(void)
@@ -531,7 +525,13 @@ int register_netfilter(void)
 
 void unregister_netfilter(void)
 {
-	unregister_trace_android_vh_do_send_sig_info(line_signal, NULL);
+	struct net *net;
+
+	rtnl_lock();
+	for_each_net(net) {
+		nf_unregister_net_hooks(net, rekernel_nf_ops, ARRAY_SIZE(rekernel_nf_ops));
+	}
+	rtnl_unlock();
 }
 
 // Test code, Useless
