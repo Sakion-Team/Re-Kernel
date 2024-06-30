@@ -19,6 +19,8 @@
 (✔) - 兼容 | Compatible
 | Device | Kernel android version | Kernel | Kernel version | Developer | Compatibility | Link | Kernel source code |
 | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: |
+| GKI | TIRAMISU | ZTC | 5.15.x | [ztc1997](https://github.com/ztc1997) | (✔) | [Link](https://t.me/pandora_kernel_release) | [Link](https://github.com/ztc1997/android_gki_kernel_5.15_common) |
+| GKI | Android S | ZTC | 5.10.x | [ztc1997](https://github.com/ztc1997) | (✔) | [Link](https://t.me/pandora_kernel_release) | [Link](https://github.com/ztc1997/android_gki_kernel_5.10_common) |
 | GKI | UPSIDE_DOWN_CAKE | AngelBeats | 6.1.x | [hamjin](https://github.com/hamjin) | (✔) | [Link](https://t.me/pandora_kernel_release) | N/A |
 | GKI | TIRAMISU | Yuni | 5.15.x | [hamjin](https://github.com/hamjin) | (✔) | [Link](https://t.me/pandora_kernel_release) | N/A |
 | GKI | Android S | Pandora | 5.10.x | [hamjin](https://github.com/hamjin) | (✔) VER > 24.03.30 | [Link](https://t.me/pandora_kernel_release) | N/A |
