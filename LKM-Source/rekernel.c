@@ -691,6 +691,9 @@ static int __init start_rekernel(void)
 #ifdef DEBUG
 	pr_info("Debug mode is enabled!\n");
 #endif
+#ifdef NETWORK_FILTER
+	pr_info("NetFilter is enabled!\n");
+#endif
 	pr_info("Re:Kernel v6.5 | DEVELOPER: Sakion Team | Timeline | USER PORT: %d\n", USER_PORT);
 	pr_info("Trying to create Re:Kernel Server......\n");
 
@@ -731,10 +734,12 @@ static int __init start_rekernel(void)
 		return LINE_ERROR;
 	}
 	
+#ifdef NETWORK_FILTER
 	if (register_netfilter() != LINE_SUCCESS) {
 		pr_err("%s: Failed to hook netfilter!\n", __func__);
 		return LINE_ERROR;
 	}
+#endif
 
 	if (register_kp() != LINE_SUCCESS) {
 		pr_err("%s: Failed to hook kprobe!\n", __func__);
@@ -750,7 +755,9 @@ static void __exit exit_rekernel(void)
 	pr_info("Re-Kernel closing...\n");
 	unregister_binder();
 	unregister_signal();
+#ifdef NETWORK_FILTER
 	unregister_netfilter();
+#endif
 	unregister_kp();
 	netlink_kernel_release(netlink_socket);
 }
