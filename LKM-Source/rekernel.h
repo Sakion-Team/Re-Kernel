@@ -6,6 +6,8 @@
 // #define KERNEL_5_15
 // #define KERNEL_6_1
 
+#define NETWORK_FILTER
+
 #define MIN_USERAPP_UID (10000)
 #define MAX_SYSTEM_UID  (2000)
 #define RESERVE_ORDER					17
