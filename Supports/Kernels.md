@@ -1,8 +1,8 @@
 ## 由咲音团队编译的内核文件 | Kernel files compiled by Sakion Team
 | Device | Kernel android version | Kernel version | Re:Kernel version | Link | Kernel source code | Binder | Signal |
 | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: |
-| GKI | UPSIDE_DOWN_CAKE | 6.1.x | 6.5 | [Download](https://www.123pan.com/s/h1szVv-9mv4H.html) | [Link](https://github.com/Sakion-Team/Re-Kernel/tree/main/LKM-Source) | ✔ | ✔ |
-| GKI | TIRAMISU | 5.15.x | 6.5 | [Download](https://www.123pan.com/s/h1szVv-9mv4H.html) | [Link](https://github.com/Sakion-Team/Re-Kernel/tree/main/LKM-Source) | ✔ | ✔ |
+| GKI | UPSIDE_DOWN_CAKE | 6.1.x | 7.0 | [Download](https://www.123pan.com/s/h1szVv-9mv4H.html) | [Link](https://github.com/Sakion-Team/Re-Kernel/tree/main/LKM-Source) | ✔ | ✔ |
+| GKI | TIRAMISU | 5.15.x | 7.0 | [Download](https://www.123pan.com/s/h1szVv-9mv4H.html) | [Link](https://github.com/Sakion-Team/Re-Kernel/tree/main/LKM-Source) | ✔ | ✔ |
 | GKI | Android S | 5.10.x | 6.5 | [Download](https://www.123pan.com/s/h1szVv-9mv4H.html) | [Link](https://github.com/Sakion-Team/Re-Kernel/tree/main/LKM-Source) | ✔ | ✔ |
 ## 由第三方开发者编译的内核文件 | Kernel files compiled by third-party developers
 ### 警告: 内核被收录并不代表内核源代码受到咲音团队审查，出现任何问题由用户自行承担。
