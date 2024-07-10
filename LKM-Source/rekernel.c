@@ -699,7 +699,7 @@ static int __init start_rekernel(void)
 #ifdef NETWORK_FILTER
 	pr_info("NetFilter is enabled!\n");
 #endif
-	pr_info("Re:Kernel v6.5 | DEVELOPER: Sakion Team | Timeline | USER PORT: %d\n", USER_PORT);
+	pr_info("Re:Kernel v7.5 | DEVELOPER: Sakion Team | Timeline | USER PORT: %d\n", USER_PORT);
 	pr_info("Trying to create Re:Kernel Server......\n");
 
 	for (netlink_unit = NETLINK_REKERNEL_MIN; netlink_unit < NETLINK_REKERNEL_MAX; netlink_unit++) {
