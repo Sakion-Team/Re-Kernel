@@ -310,6 +310,7 @@ static struct binder_transaction* binder_find_outdated_transaction_ilocked(struc
 	struct list_head* target_list)
 {
 	struct binder_work* w;
+	bool second = false;
 
 	list_for_each_entry(w, target_list, entry) {
 		struct binder_transaction* t_queued;
@@ -317,8 +318,12 @@ static struct binder_transaction* binder_find_outdated_transaction_ilocked(struc
 		if (w->type != BINDER_WORK_TRANSACTION)
 			continue;
 		t_queued = container_of(w, struct binder_transaction, work);
-		if (binder_can_update_transaction(t_queued, t))
-			return t_queued;
+		if (binder_can_update_transaction(t_queued, t)) {
+			if (second)
+				return t_queued;
+			else
+				second = true;
+		}
 	}
 	return NULL;
 }
@@ -345,18 +350,18 @@ static int __nocfi binder_proc_transaction_pre(struct kprobe* p, struct pt_regs*
 	struct binder_transaction* t = (struct binder_transaction*)regs->regs[0];
 	struct binder_proc* proc = (struct binder_proc*)regs->regs[1];
 
-	struct binder_node* node = NULL;
+	struct binder_node* node = t->buffer->target_node;
 	struct binder_transaction* t_outdated = NULL;
 
-	if (!proc || proc->is_frozen || !(t->flags & TF_ONE_WAY))
+	if (!node || !proc || proc->is_frozen || !(t->flags & TF_ONE_WAY))
 		return 0;
 
 	if (line_is_frozen(proc->tsk)) {
-		node = t->buffer->target_node;
-		if (!node)
-			return 0;
-
 		binder_node_lock(node);
+		if (!node->has_async_transaction) {
+			binder_node_unlock(node);
+			return 0;
+		}
 		binder_inner_proc_lock(proc);
 		t_outdated = binder_find_outdated_transaction_ilocked(t, &node->async_todo);
 		if (t_outdated) {
