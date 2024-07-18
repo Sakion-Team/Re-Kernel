@@ -11,9 +11,6 @@ This project is using a [GPL License](LICENSE), If you need to modify or redistr
 ## Downloading
 Find your device kernel from the [list of supported devices](https://github.com/Sakion-Team/Re-Kernel/tree/main/Supports), and download it.
 
-## Start use
-Tip: MIUI/HyperOS or ColorOS/RealmeUI do not require the use of this kernel.
-
 ### Warning
 If you cannot to recover the device after it bootloop, please use methods 1 and 3 with caution!
 
