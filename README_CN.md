@@ -11,10 +11,6 @@
 ## 下载内核
 在 [Re:Kernel已适配机型列表](https://github.com/Sakion-Team/Re-Kernel/tree/main/Supports) 中寻找你设备的内核并下载
 
-## 开始使用
-
-提示: 目前MIUI/HyperOS和ColorOS/RealmeUI均支持Re:Kernel正在做的事 无需使用Re:Kernel
-
 ### 警告
 请确保你对 设备变砖 有所了解 如果你不会救砖 请谨慎使用方法一及方法三！
 
