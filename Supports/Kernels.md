@@ -19,9 +19,9 @@
 (✔) - 兼容 | Compatible
 | Device | Kernel android version | Kernel | Kernel version | Developer | Compatibility | Link | Kernel source code |
 | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: |
-| GKI | TIRAMISU | ETO | 5.15.x | ETO-妖刀 | (✔) | N/A | N/A |
-| GKI | Android S | ETO | 5.10.x | ETO-妖刀 | (✔) | N/A | N/A |
-| GKI | Android S | Marisa | 5.10.x | 普通的魔法使56 | (✘) | [Link](https://gitea.com/Laulan56/MarisaKernel_Marble-release) | N/A |
+| GKI | TIRAMISU | ETO | 5.15.x | [ETO-妖刀](http://www.coolapk.com/u/2749672) | (✔) | N/A | N/A |
+| GKI | Android S | ETO | 5.10.x | [ETO-妖刀](http://www.coolapk.com/u/2749672) | (✔) | N/A | N/A |
+| GKI | Android S | Marisa | 5.10.x | [普通的魔法使56](http://www.coolapk.com/u/2840541) | (✘) | [Link](https://gitea.com/Laulan56/MarisaKernel_Marble-release) | N/A |
 | GKI | Android S | VIVO | 5.10.x | VIVO TEAM | (✘) | N/A | N/A |
 | GKI | TIRAMISU | ZTC | 5.15.x | [ztc1997](https://github.com/ztc1997) | (✔) | N/A | [Link](https://github.com/ztc1997/android_gki_kernel_5.15_common) |
 | GKI | Android S | ZTC | 5.10.x | [ztc1997](https://github.com/ztc1997) | (✔) | N/A | [Link](https://github.com/ztc1997/android_gki_kernel_5.10_common) |
