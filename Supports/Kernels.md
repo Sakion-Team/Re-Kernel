@@ -22,7 +22,8 @@
 | GKI | TIRAMISU | ETO | 5.15.x | [ETO-妖刀](http://www.coolapk.com/u/2749672) | (✔) | N/A | N/A |
 | GKI | Android S | ETO | 5.10.x | [ETO-妖刀](http://www.coolapk.com/u/2749672) | (✔) | N/A | N/A |
 | GKI | Android S | Marisa | 5.10.x | [普通的魔法使56](http://www.coolapk.com/u/2840541) | (✘) | [Link](https://gitea.com/Laulan56/MarisaKernel_Marble-release) | N/A |
-| GKI | Android S | VIVO | 5.10.x | VIVO TEAM | (✘) | N/A | N/A |
+| GKI | Android S | Pixel Kernel | 5.10.x | Google Team | (✘) | N/A | N/A |
+| GKI | Android S | VIVO Kernel | 5.10.x | VIVO TEAM | (✘) | N/A | N/A |
 | GKI | TIRAMISU | ZTC | 5.15.x | [ztc1997](https://github.com/ztc1997) | (✔) | N/A | [Link](https://github.com/ztc1997/android_gki_kernel_5.15_common) |
 | GKI | Android S | ZTC | 5.10.x | [ztc1997](https://github.com/ztc1997) | (✔) | N/A | [Link](https://github.com/ztc1997/android_gki_kernel_5.10_common) |
 | GKI | UPSIDE_DOWN_CAKE | AngelBeats | 6.1.x | [hamjin](https://github.com/hamjin) | (✔) | [Link](https://t.me/pandora_kernel_release) | N/A |
