@@ -12,15 +12,19 @@
 | Kernel Patch | N/A | 4.4-5.15 | 7.5 | [Download](https://github.com/lzghzr/APatch_kpm/releases/download/2024081800/re_kernel_6.0.10_network.kpm) | [Link](https://github.com/lzghzr/APatch_kpm/tree/main/re_kernel) | ✔ | ✔ |
 
 ## 内核兼容性追踪 | Kernel compatibility tracking
-(✘) - 不兼容 | Incompatible
+(✘) - 永远不会兼容 | Incompatible, and never be compatible
 
 (?) - 未知 | Unknown
 
 (✔) - 兼容 | Compatible
 | Device | Kernel android version | Kernel | Kernel version | Developer | Compatibility | Link | Kernel source code |
 | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: |
-| GKI | TIRAMISU | ZTC | 5.15.x | [ztc1997](https://github.com/ztc1997) | (✔) | [Link](https://t.me/pandora_kernel_release) | [Link](https://github.com/ztc1997/android_gki_kernel_5.15_common) |
-| GKI | Android S | ZTC | 5.10.x | [ztc1997](https://github.com/ztc1997) | (✔) | [Link](https://t.me/pandora_kernel_release) | [Link](https://github.com/ztc1997/android_gki_kernel_5.10_common) |
+| GKI | TIRAMISU | ETO | 5.15.x | ETO-妖刀 | (✔) | N/A | N/A |
+| GKI | Android S | ETO | 5.10.x | ETO-妖刀 | (✔) | N/A | N/A |
+| GKI | Android S | Marisa | 5.10.x | 普通的魔法使56 | (✘) | [Link](https://gitea.com/Laulan56/MarisaKernel_Marble-release) | N/A |
+| GKI | Android S | VIVO | 5.10.x | VIVO TEAM | (✘) | N/A | N/A |
+| GKI | TIRAMISU | ZTC | 5.15.x | [ztc1997](https://github.com/ztc1997) | (✔) | N/A | [Link](https://github.com/ztc1997/android_gki_kernel_5.15_common) |
+| GKI | Android S | ZTC | 5.10.x | [ztc1997](https://github.com/ztc1997) | (✔) | N/A | [Link](https://github.com/ztc1997/android_gki_kernel_5.10_common) |
 | GKI | UPSIDE_DOWN_CAKE | AngelBeats | 6.1.x | [hamjin](https://github.com/hamjin) | (✔) | [Link](https://t.me/pandora_kernel_release) | N/A |
 | GKI | TIRAMISU | Yuni | 5.15.x | [hamjin](https://github.com/hamjin) | (✔) | [Link](https://t.me/pandora_kernel_release) | N/A |
 | GKI | Android S | Pandora | 5.10.x | [hamjin](https://github.com/hamjin) | (✔) VER > 24.03.30 | [Link](https://t.me/pandora_kernel_release) | N/A |
