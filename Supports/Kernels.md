@@ -29,10 +29,10 @@
 | GKI | UPSIDE_DOWN_CAKE | AngelBeats | 6.1.x | [hamjin](https://github.com/hamjin) | (✔) | [Link](https://t.me/pandora_kernel_release) | N/A |
 | GKI | TIRAMISU | Yuni | 5.15.x | [hamjin](https://github.com/hamjin) | (✔) | [Link](https://t.me/pandora_kernel_release) | N/A |
 | GKI | Android S | Pandora | 5.10.x | [hamjin](https://github.com/hamjin) | (✔) VER > 24.03.30 | [Link](https://t.me/pandora_kernel_release) | N/A |
-| GKI | UPSIDE_DOWN_CAKE | Voyager | 6.1.x | [The Voyager](https://github.com/TheVoyager0777) | (✔) | QQ: 652361723 | N/A |
-| GKI | TIRAMISU | Voyager | 5.15.x | [The Voyager](https://github.com/TheVoyager0777) | (✔) | QQ: 652361723 | N/A |
-| GKI | Android S | Voyager | 5.10.x | [The Voyager](https://github.com/TheVoyager0777) | (✔) | QQ: 652361723 | N/A |
-| ONLY XIAOMI/REDMI | N/A | Voyager | 4.x | [The Voyager](https://github.com/TheVoyager0777) | (✔) | QQ: 652361723 | N/A |
+| GKI | UPSIDE_DOWN_CAKE | Voyager | 6.1.x | [The Voyager](https://github.com/TheVoyager0777) | (✔) | N/A | N/A |
+| GKI | TIRAMISU | Voyager | 5.15.x | [The Voyager](https://github.com/TheVoyager0777) | (✔) | N/A | N/A |
+| GKI | Android S | Voyager | 5.10.x | [The Voyager](https://github.com/TheVoyager0777) | (✔) | N/A | N/A |
+| ONLY XIAOMI/REDMI | N/A | Voyager | 4.x | [The Voyager](https://github.com/TheVoyager0777) | (✔) | N/A | N/A |
 
 如果你的GKI内核与ReKernel不兼容 说明开发者对内核修改严重，破坏了GKI内核规范
 
