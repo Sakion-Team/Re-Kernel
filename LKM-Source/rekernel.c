@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Sakion Team., Ltd. 2015. All rights reserved.
+ * Copyright (c) Sakion Team. All rights reserved.
  *
  * File name: rekernel.c
  * Description: rekernel module
