@@ -1,5 +1,5 @@
-#ifndef FREEZER_GKI_H
-#define FREEZER_GKI_H
+#ifndef REKERNEL_H
+#define REKERNEL_H
 
 // define on your own
 // #define KERNEL_5_10
