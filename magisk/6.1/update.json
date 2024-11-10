@@ -1,6 +1,6 @@
 {
-  "version": "v7.0",
-  "versionCode": 70,
-  "zipUrl": "https://github.com/Sakion-Team/Re-Kernel/releases/download/releases/Re-Kernel-v7.0-6.1.zip",
+  "version": "v7.5",
+  "versionCode": 75,
+  "zipUrl": "https://github.com/Sakion-Team/Re-Kernel/releases/download/releases/Re-Kernel-v7.5-6.1.zip",
   "changelog": "https://raw.githubusercontent.com/Sakion-Team/Re-Kernel/main/magisk/6.1/update.md"
 }
