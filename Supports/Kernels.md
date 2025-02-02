@@ -26,7 +26,8 @@
 | GKI | Android S | ETO | 5.10.x | [ETO-妖刀](http://www.coolapk.com/u/2749672) | (✔) | N/A | N/A |
 | GKI | Android S | Marisa | 5.10.x | [Laulan56](https://github.com/Laulan56) | (✓) VER ≥ R5 | [Link](https://gitea.com/Laulan56/MarisaKernel_Marble-release) | N/A |
 | GKI | Android S | Pixel Kernel | 5.10.x | Google Team | (✘) | N/A | N/A |
-| GKI | Android S | VIVO Kernel | 5.10.x | VIVO TEAM | (✘) | N/A | N/A |
+| GKI | Android S | VIVO Kernel | 5.10.x - 6.6.x | VIVO TEAM | (✘) | N/A | N/A |
+| GKI | Android S | HarmonyOS Kernel | 5.10.x | HUAWEI TEAM | (✘) | N/A | N/A |
 | GKI | TIRAMISU | ZTC | 5.15.x | [ztc1997](https://github.com/ztc1997) | (✔) | N/A | [Link](https://github.com/ztc1997/android_gki_kernel_5.15_common) |
 | GKI | Android S | ZTC | 5.10.x | [ztc1997](https://github.com/ztc1997) | (✔) | N/A | [Link](https://github.com/ztc1997/android_gki_kernel_5.10_common) |
 | GKI | VANILLA_ICE_CREAM | Haruhi | 6.6.x | [hamjin](https://github.com/hamjin) | (✔) | [Link](https://t.me/pandora_kernel_release) | N/A |
