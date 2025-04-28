@@ -4,7 +4,7 @@
  * File name: rekernel.c
  * Description: rekernel module
  * Author: nep_timeline@outlook.com
- * Last Modification:  2024/11/10
+ * Last Modification:  2025/04/28
  */
 #include "linux/printk.h"
 #include <linux/module.h>
@@ -79,10 +79,10 @@ spinlock_t rekernel_map_lock; /* two maps use the same spinlock */
 
 static inline bool rekernel_is_frozen_state_compatible(struct task_struct *task)
 {
-#if defined(KERNEL_6_1) || defined(KERNEL_6_6)
-	return READ_ONCE(task->__state) & TASK_FROZEN;
-#else
+#if defined(KERNEL_5_10) || defined(KERNEL_5_15)
 	return frozen(task);
+#else
+	return READ_ONCE(task->__state) & TASK_FROZEN;
 #endif
 }
 
@@ -122,16 +122,16 @@ static int sendMessage(char *packet_buffer, uint16_t len)
     return netlink_unicast(netlink_socket, socket_buffer, USER_PORT, MSG_DONTWAIT);
 }
 
-#if defined(KERNEL_6_6)
-void line_binder_alloc_new_buf_locked(void *data, size_t size, size_t *free_async_space, int is_async, bool *should_fail)
-#elif defined(KERNEL_5_15) || defined(KERNEL_6_1)
+#if defined(KERNEL_5_15) || defined(KERNEL_6_1)
 void line_binder_alloc_new_buf_locked(void *data, size_t size, size_t *free_async_space, int is_async)
 #elif defined(KERNEL_5_10)
 void line_binder_alloc_new_buf_locked(void *data, size_t size, struct binder_alloc *alloc, int is_async)
+#else
+void line_binder_alloc_new_buf_locked(void *data, size_t size, size_t *free_async_space, int is_async, bool *should_fail)
 #endif
 {
 	struct task_struct *p = NULL;
-#if defined(KERNEL_5_15) || defined(KERNEL_6_1) || defined(KERNEL_6_6)
+#ifndef KERNEL_5_10
 	struct binder_alloc *alloc = NULL;
 
 	alloc = container_of(free_async_space, struct binder_alloc, free_async_space);
@@ -161,12 +161,12 @@ void line_binder_alloc_new_buf_locked(void *data, size_t size, struct binder_all
 struct hlist_head *binder_procs = NULL;
 struct mutex *binder_procs_lock = NULL;
 
-#if defined(KERNEL_6_6)
+#if defined(KERNEL_5_10) || defined(KERNEL_5_15) || defined(KERNEL_6_1)
 void line_binder_preset(void *data, struct hlist_head *hhead,
-			   struct mutex *lock, struct binder_proc *proc)
+	struct mutex *lock)
 #elif
 void line_binder_preset(void *data, struct hlist_head *hhead,
-			   struct mutex *lock)
+	struct mutex *lock, struct binder_proc *proc)
 #endif
 {
 	if (binder_procs == NULL)
@@ -196,7 +196,7 @@ void line_binder_reply(void *data, struct binder_proc *target_proc, struct binde
 	}
 }
 
-#if defined(KERNEL_6_1) || defined(KERNEL_6_6)
+#if defined(KERNEL_6_1) || defined(KERNEL_6_6) || defined(KERNEL_6_12)
 static long line_copy_from_user_nofault(void *dst, const void __user *src, size_t size)
 {
 	long ret = -EFAULT;
@@ -213,10 +213,10 @@ static long line_copy_from_user_nofault(void *dst, const void __user *src, size_
 
 static long line_copy_from_user_compatible(void *dst, const void __user *src, size_t size)
 {
-#if defined(KERNEL_6_1) || defined(KERNEL_6_6)
-	return line_copy_from_user_nofault(dst, src, size);
-#else
+#if defined(KERNEL_5_10) || defined(KERNEL_5_15)
 	return copy_from_user(dst, src, size);
+#else
+	return line_copy_from_user_nofault(dst, src, size);
 #endif
 }
 
