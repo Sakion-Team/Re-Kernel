@@ -164,7 +164,7 @@ struct mutex *binder_procs_lock = NULL;
 #if defined(KERNEL_5_10) || defined(KERNEL_5_15) || defined(KERNEL_6_1)
 void line_binder_preset(void *data, struct hlist_head *hhead,
 	struct mutex *lock)
-#elif
+#else
 void line_binder_preset(void *data, struct hlist_head *hhead,
 	struct mutex *lock, struct binder_proc *proc)
 #endif
