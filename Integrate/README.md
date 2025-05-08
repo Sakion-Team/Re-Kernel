@@ -14,6 +14,7 @@ Firstly, you should create a header or source file to store the NETLINK code, wi
 #include <net/sock.h>
 #include <linux/netlink.h>
 #include <linux/proc_fs.h>
+#include <linux/freezer.h>
 
 #define NETLINK_REKERNEL_MAX     		26
 #define NETLINK_REKERNEL_MIN     		22
@@ -24,9 +25,9 @@ Firstly, you should create a header or source file to store the NETLINK code, wi
 #define RESERVE_ORDER				17
 #define WARN_AHEAD_SPACE			(1 << RESERVE_ORDER)
 
-struct sock *rekernel_netlink = NULL;
+static struct sock *rekernel_netlink = NULL;
 extern struct net init_net;
-int netlink_unit = NETLINK_REKERNEL_MIN;
+static int netlink_unit = NETLINK_REKERNEL_MIN;
 
 static inline bool line_is_frozen(struct task_struct *task)
 {
@@ -57,7 +58,7 @@ static int send_netlink_message(char *msg, uint16_t len) {
 static void netlink_rcv_msg(struct sk_buff *skbuffer) { // Ignore recv msg.
 }
 
-struct netlink_kernel_cfg rekernel_cfg = { 
+static struct netlink_kernel_cfg rekernel_cfg = { 
     .input = netlink_rcv_msg,
 };
 
