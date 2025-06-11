@@ -8,9 +8,6 @@
 // #define KERNEL_6_6
 // #define KERNEL_6_12
 
-// define on your own
-// #define CPUCTL_LISTEN
-
 #define CLEAN_UP_ASYNC_BINDER
 
 #define MIN_USERAPP_UID                 (10000)
