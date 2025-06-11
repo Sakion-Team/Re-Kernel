@@ -87,10 +87,10 @@ public class ReKernel {
                             int fromPid = StringUtils.StringToInteger(StringUtils.getSubString(data, "from_pid=", ","));
                             int fromUid = StringUtils.StringToInteger(StringUtils.getSubString(data, "from=", ","));
                             int targetPid = StringUtils.StringToInteger(StringUtils.getSubString(data, "target_pid=", ","));
-                            int targetUid = StringUtils.StringToInteger(StringUtils.getSubString(data, "target=", ";"));
-                            if (oneway == 0 || bindertype.equals("free_buffer_full")) {
-                                // Your code
-                            }
+                            int targetUid = StringUtils.StringToInteger(StringUtils.getSubString(data, "target=", ","));
+                            int rpcName = StringUtils.getSubString(data, "rpc_name=", ",");
+                            int code = StringUtils.StringToInteger(StringUtils.getSubString(data, "code=", ";"));
+                            // Your code
                         } else if (type.equals("Signal")) {
                             int killerPid = StringUtils.StringToInteger(StringUtils.getSubString(data, "killer_pid=", ","));
                             int killerUid = StringUtils.StringToInteger(StringUtils.getSubString(data, "killer=", ","));
@@ -98,7 +98,8 @@ public class ReKernel {
                             int targetUid = StringUtils.StringToInteger(StringUtils.getSubString(data, "dst=", ";"));
                             // Your code
                         } else if (type.equals("Network")) {
-                            int targetUid = StringUtils.StringToInteger(StringUtils.getSubString(data, "target=", ";"));
+                            int targetUid = StringUtils.StringToInteger(StringUtils.getSubString(data, "target=", ","));
+                            String proto = StringUtils.getSubString(data, "proto=", ";");
                             // Your code
                         }
                     }
