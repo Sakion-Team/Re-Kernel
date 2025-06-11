@@ -1,1 +1,1 @@
-使用kprobe代替vendor hook来清理过时的异步消息
+向接入的应用报告RPC_NAME, Code字段
