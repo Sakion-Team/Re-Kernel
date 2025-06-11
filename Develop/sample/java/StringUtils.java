@@ -20,7 +20,7 @@ public class StringUtils {
         return result;
     }
 
-    public static Integer StringToInteger(String str) {
+    public static int StringToInteger(String str) {
         String data = str.trim();
         StringBuilder result = new StringBuilder();
         for (int i = 0; i < data.length(); i++) {
@@ -29,6 +29,10 @@ public class StringUtils {
                 result.append(c);
         }
 
-        return Integer.parseInt(result.toString());
+        try {
+            return Integer.parseInt(result.toString());
+        } catch (NumberFormatException ignored) {
+            return -1;
+        }
     }
 }
