@@ -5,7 +5,7 @@
 #include <netinet/tcp.h>
 #include <unistd.h>
 
-#define PACKET_SIZE      128
+#define PACKET_SIZE      256
 #define NETLINK_UNIT     22
 #define USER_PORT        100
 #define MAX_PLOAD        125
