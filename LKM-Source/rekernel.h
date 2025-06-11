@@ -8,6 +8,7 @@
 // #define KERNEL_6_6
 // #define KERNEL_6_12
 
+#define NETWORK_FILTER
 #define CLEAN_UP_ASYNC_BINDER
 
 #define MIN_USERAPP_UID                 (10000)
