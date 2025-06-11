@@ -4,7 +4,7 @@
  * File name: rekernel.c
  * Description: rekernel module
  * Author: nep_timeline@outlook.com
- * Last Modification:  2025/04/28
+ * Last Modification:  2025/06/11
  */
 #include "linux/printk.h"
 #include <linux/module.h>
@@ -46,7 +46,7 @@
 #define NETLINK_REKERNEL_MAX     		26
 #define NETLINK_REKERNEL_MIN     		22
 #define USER_PORT        				100
-#define PACKET_SIZE 					128
+#define PACKET_SIZE 					256
 int netlink_count = 0;
 char netlink_kmsg[PACKET_SIZE];
 struct sock *netlink_socket = NULL;
@@ -151,7 +151,7 @@ void line_binder_alloc_new_buf_locked(void *data, size_t size, size_t *free_asyn
 #endif
 			if (netlink_socket != NULL) {
 				char binder_kmsg[PACKET_SIZE];
-				snprintf(binder_kmsg, sizeof(binder_kmsg), "type=Binder,bindertype=free_buffer_full,oneway=1,from_pid=%d,from=%d,target_pid=%d,target=%d;", current->pid, task_uid(current).val, p->pid, task_uid(p).val);
+				snprintf(binder_kmsg, sizeof(binder_kmsg), "type=Binder,bindertype=free_buffer_full,oneway=1,from_pid=%d,from=%d,target_pid=%d,target=%d,rpc_name=%s,code=%d;", task_tgid_nr(current), task_uid(current).val, task_tgid_nr(p), task_uid(p).val, "FREE_BUFFER_FULL", -1);
 				sendMessage(binder_kmsg, strlen(binder_kmsg));
 			}
 		}
@@ -190,7 +190,7 @@ void line_binder_reply(void *data, struct binder_proc *target_proc, struct binde
 #endif
 		if (netlink_socket != NULL) {
 			char binder_kmsg[PACKET_SIZE];
-			snprintf(binder_kmsg, sizeof(binder_kmsg), "type=Binder,bindertype=reply,oneway=0,from_pid=%d,from=%d,target_pid=%d,target=%d;", proc->pid, task_uid(proc->tsk).val, target_proc->pid, task_uid(target_proc->tsk).val);
+			snprintf(binder_kmsg, sizeof(binder_kmsg), "type=Binder,bindertype=reply,oneway=0,from_pid=%d,from=%d,target_pid=%d,target=%d,rpc_name=%s,code=%d;", task_tgid_nr(proc->tsk), task_uid(proc->tsk).val, task_tgid_nr(target_proc->tsk), task_uid(target_proc->tsk).val, "SYNC_BINDER_REPLY", -1);
 			sendMessage(binder_kmsg, strlen(binder_kmsg));
 		}
 	}
@@ -220,6 +220,22 @@ static long line_copy_from_user_compatible(void *dst, const void __user *src, si
 #endif
 }
 
+static bool line_is_belong_cpugrp(struct task_struct *task)
+{
+	if (task->sched_task_group != NULL) {
+		struct cfs_bandwidth cfs_b = task->sched_task_group->cfs_bandwidth;
+
+		if (cfs_b.quota != -1) {
+			return true;
+
+		} else if (cfs_b.quota == -1) {
+			return false;
+		}
+	}
+
+	return false;
+}
+
 void line_binder_transaction(void *data, struct binder_proc *target_proc, struct binder_proc *proc,
 	struct binder_thread *thread, struct binder_transaction_data *tr)
 {
@@ -241,11 +257,26 @@ void line_binder_transaction(void *data, struct binder_proc *target_proc, struct
 #endif
 		if (netlink_socket != NULL) {
 			char binder_kmsg[PACKET_SIZE];
-			snprintf(binder_kmsg, sizeof(binder_kmsg), "type=Binder,bindertype=transaction,oneway=0,from_pid=%d,from=%d,target_pid=%d,target=%d;", proc->pid, task_uid(proc->tsk).val, target_proc->pid, task_uid(target_proc->tsk).val);
+			snprintf(binder_kmsg, sizeof(binder_kmsg), "type=Binder,bindertype=transaction,oneway=0,from_pid=%d,from=%d,target_pid=%d,target=%d,rpc_name=%s,code=%d;", task_tgid_nr(proc->tsk), task_uid(proc->tsk).val, task_tgid_nr(target_proc->tsk), task_uid(target_proc->tsk).val, "SYNC_BINDER", -1);
 			sendMessage(binder_kmsg, strlen(binder_kmsg));
 		}
 	}
-
+#ifdef CPUCTL_LISTEN
+	if (!(tr->flags & TF_ONE_WAY) /*report sync binder call*/
+			&& target_proc
+			&& (task_uid(target_proc->tsk).val > MIN_USERAPP_UID
+			    || task_uid(target_proc->tsk).val == SYSTEM_APP_UID)
+			&& line_is_belong_cpugrp(target_proc->tsk)) {
+#ifdef DEBUG
+		pr_info("[Re-Kernel LKM] CPUCTL Sync Binder Transaction! from=%d | target=%d\n", task_uid(proc->tsk).val, task_uid(target_proc->tsk).val);
+#endif
+		if (netlink_socket != NULL) {
+			char binder_kmsg[PACKET_SIZE];
+			snprintf(binder_kmsg, sizeof(binder_kmsg), "type=Binder,bindertype=transaction,oneway=0,from_pid=%d,from=%d,target_pid=%d,target=%d,rpc_name=%s,code=%d;", task_tgid_nr(proc->tsk), task_uid(proc->tsk).val, task_tgid_nr(target_proc->tsk), task_uid(target_proc->tsk).val, "SYNC_BINDER_CPUCTL", -1);
+			sendMessage(binder_kmsg, strlen(binder_kmsg));
+		}
+	}
+#endif
 	if ((tr->flags & TF_ONE_WAY) /* async binder */
 		&& target_proc
 		&& (NULL != target_proc->tsk)
@@ -270,8 +301,8 @@ void line_binder_transaction(void *data, struct binder_proc *target_proc, struct
 #endif
 			if (netlink_socket != NULL) {
 				char binder_kmsg[PACKET_SIZE];
-				snprintf(binder_kmsg, sizeof(binder_kmsg), "type=Binder,bindertype=transaction,oneway=1,from_pid=%d,from=%d,target_pid=%d,target=%d;", proc->pid, task_uid(proc->tsk).val, target_proc->pid, task_uid(target_proc->tsk).val);
-				sendMessage(binder_kmsg, strlen(binder_kmsg));
+				snprintf(binder_kmsg, sizeof(binder_kmsg), "type=Binder,bindertype=transaction,oneway=1,from_pid=%d,from=%d,target_pid=%d,target=%d,rpc_name=%s,code=%d;", task_tgid_nr(proc->tsk), task_uid(proc->tsk).val, task_tgid_nr(target_proc->tsk), task_uid(target_proc->tsk).val, buf, tr->code);
+			    sendMessage(binder_kmsg, strlen(binder_kmsg));
 			}
 		}
 	}
@@ -413,6 +444,22 @@ void line_signal(void *data, int sig, struct task_struct *killer, struct task_st
 			sendMessage(binder_kmsg, strlen(binder_kmsg));
 		}
 	}
+#ifdef CPUCTL_LISTEN
+	if (line_is_belong_cpugrp(dst) &&
+			(sig == SIGKILL
+			|| sig == SIGTERM
+			|| sig == SIGABRT
+			|| sig == SIGQUIT)) {
+#ifdef DEBUG
+		pr_info("[Re-Kernel LKM] CPUCTL Process Signal! signal=%d\n", sig);
+#endif
+		if (netlink_socket != NULL) {
+			char binder_kmsg[PACKET_SIZE];
+			snprintf(binder_kmsg, sizeof(binder_kmsg), "type=CPUCTL_Signal,signal=%d,killer_pid=%d,killer=%d,dst_pid=%d,dst=%d;", sig, task_tgid_nr(killer), task_uid(killer).val, task_tgid_nr(dst), task_uid(dst).val);
+			sendMessage(binder_kmsg, strlen(binder_kmsg));
+		}
+	}
+#endif
 }
 
 int register_binder(void)
@@ -470,38 +517,7 @@ static inline uid_t line_sock2uid(struct sock *sk)
 		return 0;
 }
 
-static unsigned int rekernel_pkg_ip4_in(void *priv, struct sk_buff *socket_buffer,
-		const struct nf_hook_state *state)
-{
-	struct sock *socket;
-	uid_t uid;
-	int protocol;
-
-	protocol = ip_hdr(socket_buffer)->protocol;
-	if (protocol != IPPROTO_TCP)
-		return NF_ACCEPT;
-
-	socket = skb_to_full_sk(socket_buffer);
-	if (socket == NULL || !sk_fullsock(socket))
-		return NF_ACCEPT;
-
-	uid = line_sock2uid(socket);
-	if (uid < MIN_USERAPP_UID)
-		return NF_ACCEPT;
-
-#ifdef DEBUG
-	pr_info("[Re-Kernel LKM] Receive net data! target=%d\n", uid);
-#endif
-	if (netlink_socket != NULL) {
-		char binder_kmsg[PACKET_SIZE];
-		snprintf(binder_kmsg, sizeof(binder_kmsg), "type=Network,target=%d;", uid);
-		sendMessage(binder_kmsg, strlen(binder_kmsg));
-	}
-
-	return NF_ACCEPT;
-}
-
-static unsigned int rekernel_pkg_ip6_in(void *priv, struct sk_buff *socket_buffer,
+static unsigned int rekernel_pkg_ipv4_ipv6_in(void *priv, struct sk_buff *socket_buffer,
 		const struct nf_hook_state *state)
 {
 	struct sock *sk;
@@ -509,10 +525,30 @@ static unsigned int rekernel_pkg_ip6_in(void *priv, struct sk_buff *socket_buffe
 	unsigned short frag_off = 0;
 	int protohdr;
 	uid_t uid;
+	uint hook;
+	struct net_device *dev = NULL;
 
-	protohdr = ipv6_find_hdr(socket_buffer, &thoff, -1, &frag_off, NULL);
-	if (protohdr != IPPROTO_TCP)
+	if (!socket_buffer || !socket_buffer->len || !state)
 		return NF_ACCEPT;
+
+	hook = state->hook;
+	if (NF_INET_LOCAL_IN == hook)
+		dev = state->in;
+
+	if (NULL == dev)
+		return NF_ACCEPT;
+
+	if (ip_hdr(skb)->version == 4) {
+		if (ip_hdr(skb)->protocol != IPPROTO_TCP)
+			return NF_ACCEPT;
+#if IS_ENABLED(CONFIG_IPV6)
+	} else if (ip_hdr(skb)->version == 6) {
+		if (ipv6_find_hdr(skb, &thoff, -1, &frag_off, NULL) != IPPROTO_TCP)
+			return NF_ACCEPT;
+#endif
+	} else {
+		return NF_ACCEPT;
+	}
 
 	sk = skb_to_full_sk(socket_buffer);
 	if (sk == NULL || !sk_fullsock(sk))
@@ -527,49 +563,36 @@ static unsigned int rekernel_pkg_ip6_in(void *priv, struct sk_buff *socket_buffe
 #endif
 	if (netlink_socket != NULL) {
 		char binder_kmsg[PACKET_SIZE];
-		snprintf(binder_kmsg, sizeof(binder_kmsg), "type=Network,target=%d;", uid);
+		if (ip_hdr(skb)->version == 4) {
+			snprintf(binder_kmsg, sizeof(binder_kmsg), "type=Network,target=%d,proto=ipv4;", uid);
+#if IS_ENABLED(CONFIG_IPV6)
+		} else if (ip_hdr(skb)->version == 6) {
+			snprintf(binder_kmsg, sizeof(binder_kmsg), "type=Network,target=%d,proto=ipv6;", uid);
+#endif
+		} else {
+			return NF_ACCEPT;
+		}
 		sendMessage(binder_kmsg, strlen(binder_kmsg));
 	}
 	
 	return NF_ACCEPT;
 }
 
-static inline unsigned int rekernel_pkg_ip_out(void *priv, struct sk_buff *socket_buffer,
-		const struct nf_hook_state *state)
-{
-	return NF_ACCEPT;
-}
-
 /* Only monitor input network packages */
 static struct nf_hook_ops rekernel_nf_ops[] = {
 	{
-		.hook     = rekernel_pkg_ip4_in,
+		.hook     = rekernel_pkg_ipv4_ipv6_in,
 		.pf       = NFPROTO_IPV4,
 		.hooknum  = NF_INET_LOCAL_IN,
 		.priority = NF_IP_PRI_SELINUX_LAST + 1,
 	},
 #if IS_ENABLED(CONFIG_IPV6)
 	{
-		.hook     = rekernel_pkg_ip6_in,
+		.hook     = rekernel_pkg_ipv4_ipv6_in,
 		.pf       = NFPROTO_IPV6,
 		.hooknum  = NF_INET_LOCAL_IN,
 		.priority = NF_IP6_PRI_SELINUX_LAST + 1,
-	},
-#endif
-	{
-		.hook     = rekernel_pkg_ip_out,
-		.pf       = NFPROTO_IPV4,
-		.hooknum  = NF_INET_LOCAL_OUT,
-		.priority = NF_IP_PRI_SELINUX_LAST + 1,
-	},
-#if IS_ENABLED(CONFIG_IPV6)
-	{
-		.hook     = rekernel_pkg_ip_out,
-		.pf       = NFPROTO_IPV6,
-		.hooknum  = NF_INET_LOCAL_OUT,
-		.priority = NF_IP6_PRI_SELINUX_LAST + 1,
-	},
-#endif
+	}
 };
 
 void unregister_signal(void)
@@ -580,7 +603,6 @@ void unregister_signal(void)
 int register_netfilter(void)
 {
 	int rc = LINE_SUCCESS;
-
 	struct net *net = NULL;
 
 	spin_lock_init(&rekernel_map_lock);
@@ -590,12 +612,17 @@ int register_netfilter(void)
 	rtnl_lock();
 	for_each_net(net) {
 		rc = nf_register_net_hooks(net, rekernel_nf_ops, ARRAY_SIZE(rekernel_nf_ops));
-		if (rc != 0) {
+		if (rc != LINE_SUCCESS) {
 			pr_err("register netfilter hooks failed, rc=%d\n", rc);
 			break;
 		}
 	}
 	rtnl_unlock();
+
+	if (rc != LINE_SUCCESS) {
+		unregister_netfilter();
+		return LINE_ERROR;
+	}
 
 	return LINE_SUCCESS;
 }
@@ -706,7 +733,7 @@ static int __init start_rekernel(void)
 #ifdef NETWORK_FILTER
 	pr_info("NetFilter is enabled!\n");
 #endif
-	pr_info("Re:Kernel v7.5 | DEVELOPER: Sakion Team | Timeline | USER PORT: %d\n", USER_PORT);
+	pr_info("Re:Kernel v8.0 | DEVELOPER: Sakion Team | Timeline | USER PORT: %d\n", USER_PORT);
 	pr_info("Trying to create Re:Kernel Server......\n");
 
 	for (netlink_unit = NETLINK_REKERNEL_MIN; netlink_unit < NETLINK_REKERNEL_MAX; netlink_unit++) {
@@ -753,10 +780,12 @@ static int __init start_rekernel(void)
 	}
 #endif
 
+#ifdef CLEAN_UP_ASYNC_BINDER
 	if (register_kp() != LINE_SUCCESS) {
 		pr_err("%s: Failed to hook kprobe!\n", __func__);
 		return LINE_ERROR;
 	}
+#endif
 
 	pr_info("Re-Kernel hooked!\n");
 	return LINE_SUCCESS;
