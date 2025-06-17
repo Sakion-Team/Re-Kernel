@@ -30,8 +30,5 @@ extern void rekernel_report(int reporttype, int type, pid_t src_pid, struct task
 extern void binder_reply_handler(pid_t src_pid, struct task_struct* src, pid_t dst_pid, struct task_struct* dst, bool oneway, struct binder_transaction_data* tr);
 extern void binder_trans_handler(pid_t src_pid, struct task_struct* src, pid_t dst_pid, struct task_struct* dst, bool oneway, struct binder_transaction_data* tr);
 extern void binder_overflow_handler(pid_t src_pid, struct task_struct* src, pid_t dst_pid, struct task_struct* dst, bool oneway, struct binder_transaction_data* tr);
-#ifdef CONFIG_REKERNEL_NETWORK
-extern void tcp_rcv_handler(struct sock* sk, int version);
-#endif /* CONFIG_REKERNEL_NETWORK */
 
 #endif /* __REKERNEL_H */
