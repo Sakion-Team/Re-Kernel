@@ -1,0 +1,15 @@
+menu "Re:Kernel"
+
+config REKERNEL
+	bool "Re:Kernel support"
+	default y
+	help
+	  Make tombstone users get a better experience.
+
+config REKERNEL_NETWORK
+	bool "Re:Kernel NetReceive unfreeze support"
+    depends on REKERNEL
+	default n
+	help
+	  Make tombstone users get a better experience.
+endmenu
