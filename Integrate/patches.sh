@@ -137,7 +137,7 @@ binder_find_outdated_transaction_ilocked(struct binder_transaction *t,\
 	struct binder_transaction *t_outdated = NULL;\
 #endif /* CONFIG_REKERNEL */' $i
 
-			binder_enqueue_work_ilocked_line=$(awk '/binder_enqueue_work_ilocked\(\&t->work, \&proc->todo\);/{print NR}' $i)
+			binder_enqueue_work_ilocked_line=$(awk '/binder_enqueue_work_ilocked\(&t->work, &proc->todo\);/{print NR}' $i)
 				sed -i ''"$((binder_enqueue_work_ilocked_line + 1))"'a\
 #ifdef CONFIG_REKERNEL\
 		if (frozen_task_group(proc->tsk)) {\
@@ -153,7 +153,7 @@ binder_find_outdated_transaction_ilocked(struct binder_transaction *t,\
 				sed -i '/proc->outstanding_txns--;/d' $i
 			fi
 
-			binder_enqueue_work_ilocked_line=$(awk '/binder_enqueue_work_ilocked\(\&t->work, \&proc->todo\);/{print NR}' $i)
+			binder_enqueue_work_ilocked_line=$(awk '/binder_enqueue_work_ilocked\(&t->work, &proc->todo\);/{print NR}' $i)
 			binder_node_unlock_line=$(awk 'NR >= '"$binder_enqueue_work_ilocked_line"' && /binder_node_unlock\(node\);/{print NR; exit}' $i)
 			sed -i ''"$binder_node_unlock_line"'a\
 \
