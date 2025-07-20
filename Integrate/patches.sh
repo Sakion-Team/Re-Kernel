@@ -1,6 +1,8 @@
 #!/bin/bash
 
 PATCHDIR=${0%/*}
+
+[ -d drivers/rekernel ] || mkdir -p drivers/rekernel
 cp -rp $PATCHDIR/rekernel/* drivers/rekernel/
 
 rekernel_file=drivers/rekernel/rekernel.c
