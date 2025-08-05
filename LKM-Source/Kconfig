@@ -1,7 +1,7 @@
 menu "Re:Kernel"
 
 config REKERNEL
-	bool "Re:Kernel support"
+	bool "Re:Kernel module"
 	depends on MODULES
 	default n
 	help
