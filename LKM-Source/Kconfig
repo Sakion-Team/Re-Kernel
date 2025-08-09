@@ -1,0 +1,17 @@
+menu "Re:Kernel"
+
+config REKERNEL
+	bool "Re:Kernel module"
+	depends on MODULES
+	default n
+	help
+	  Make tombstone users get a better experience.
+	  Tips: Enabling this will build Re-Kernel as a module
+
+config REKERNEL_NETWORK
+    bool "Re:Kernel NetReceive unfreeze support"
+    depends on REKERNEL
+    default n
+    help
+	  Allow ReKernel to listen to network activity then send signal to tombstone.
+endmenu
