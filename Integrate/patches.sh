@@ -10,7 +10,7 @@ if grep -q 'struct proc_ops' include/linux/proc_fs.h; then
 	sed -i 's/file_operations/proc_ops/' $rekernel_file
 	sed -i 's/\.open/\.proc_open/' $rekernel_file
 	sed -i 's/\.read/\.proc_read/' $rekernel_file
-	sed -i 's/\.llseek/\.proc_llseek/' $rekernel_file
+	sed -i 's/\.llseek/\.proc_lseek/' $rekernel_file
 	sed -i 's/\.release/\.proc_release/' $rekernel_file
 fi
 
