@@ -43,7 +43,7 @@ static const char* rpc_type[] = {
 static int netlink_count = 0;
 static struct sock* netlink_socket;
 extern struct net init_net;
-static unsigned long netlink_unit = 0;
+static int netlink_unit = 0;
 
 static int sendMessage(char* packet_buffer, uint16_t len) {
 	struct sk_buff* socket_buffer;
