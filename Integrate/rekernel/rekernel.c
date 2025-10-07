@@ -43,7 +43,7 @@ static const char* rpc_type[] = {
 static int netlink_count = 0;
 static struct sock* netlink_socket;
 extern struct net init_net;
-static unsigned long netlink_unit = 0;
+static int netlink_unit = 0;
 
 static int sendMessage(char* packet_buffer, uint16_t len) {
 	struct sk_buff* socket_buffer;
@@ -277,7 +277,7 @@ void rekernel_report(int reporttype, int type, pid_t src_pid, struct task_struct
 			}
 			snprintf(binder_kmsg, sizeof(binder_kmsg), "type=Binder,bindertype=%s,oneway=%d,from_pid=%d,from=%d,target_pid=%d,target=%d,rpc_name=%s,code=%d;", binder_type[type], oneway, src_pid, task_uid(src).val, dst_pid, task_uid(dst).val, buf, tr->code);
 		} else {
-			snprintf(binder_kmsg, sizeof(binder_kmsg), "type=Binder,bindertype=%s,oneway=%d,from_pid=%d,from=%d,target_pid=%d,target=%d;", binder_type[type], oneway, src_pid, task_uid(src).val, dst_pid, task_uid(dst).val, rpc_type[type], -1);
+			snprintf(binder_kmsg, sizeof(binder_kmsg), "type=Binder,bindertype=%s,oneway=%d,from_pid=%d,from=%d,target_pid=%d,target=%d,rpc_name=%s,code=%d;", binder_type[type], oneway, src_pid, task_uid(src).val, dst_pid, task_uid(dst).val, rpc_type[type], -1);
 		}
 		break;
 	case SIGNAL:
