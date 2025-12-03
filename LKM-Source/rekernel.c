@@ -47,7 +47,7 @@
 #define NETLINK_REKERNEL_MIN     		22
 #define USER_PORT        				100
 #define PACKET_SIZE 					256
-int netlink_count = 0;
+
 char netlink_kmsg[PACKET_SIZE];
 struct sock *netlink_socket = NULL;
 extern struct net init_net;
@@ -57,6 +57,7 @@ static unsigned long (*re_kallsyms_lookup_name)(const char* name);
 static void (*re_binder_transaction_buffer_release)(struct binder_proc* proc, struct binder_thread* thread, struct binder_buffer* buffer, binder_size_t off_end_offset, bool is_failure);
 static void (*re_binder_alloc_free_buf)(struct binder_alloc* alloc, struct binder_buffer* buffer);
 static struct binder_stats(*re_binder_stats);
+static struct proc_dir_entry *rekernel_dir, *rekernel_unit_entry;
 
 /* hashmap for monitored uids */
 #define REKERNEL_UID_HASH_BITS 6
@@ -591,22 +592,27 @@ int register_netfilter(void)
 	return LINE_SUCCESS;
 }
 
-// Test code, Useless
 static void netlink_rcv_msg(struct sk_buff *socket_buffer)
 {
 	struct nlmsghdr *nlhdr = NULL;
     char *umsg = NULL;
-    char *kmsg;
-
     if (socket_buffer->len >= nlmsg_total_size(0)) {
-        netlink_count++;
-   		snprintf(netlink_kmsg, sizeof(netlink_kmsg), "Successfully received data packet! %d", netlink_count);
-    	kmsg = netlink_kmsg;
         nlhdr = nlmsg_hdr(socket_buffer);
         umsg = NLMSG_DATA(nlhdr);
         if (umsg) {
-            printk("kernel recv packet from user: %s\n", umsg);
-            sendMessage(kmsg, strlen(kmsg));
+#ifdef DEBUG
+            pr_info("Re-Kernel_netlink recv_from_user: %s\n", umsg);
+#endif
+            if (strcmp(umsg, "#proc_remove") == 0) {
+                if (rekernel_unit_entry) {
+                    proc_remove(rekernel_unit_entry);
+                    rekernel_unit_entry = NULL;
+                }
+                if (rekernel_dir) {
+                    proc_remove(rekernel_dir);
+                    rekernel_dir = NULL;
+                }
+            }
         }
     }
 }
@@ -674,8 +680,6 @@ int __nocfi register_kp(void) {
 void unregister_kp(void) {
 	unregister_kprobe(&kp_binder_proc_transaction);
 }
-
-static struct proc_dir_entry *rekernel_dir, *rekernel_unit_entry;    
 
 static int __init start_rekernel(void)
 {
