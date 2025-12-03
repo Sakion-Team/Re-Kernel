@@ -4,7 +4,7 @@
  * File name: rekernel.c
  * Description: rekernel module
  * Author: nep_timeline@outlook.com
- * Last Modification:  2025/06/11
+ * Last Modification:  2025/12/03
  */
 #include "linux/printk.h"
 #include <linux/module.h>
@@ -20,7 +20,7 @@
 #include "rekernel.h"
 #include <trace/hooks/binder.h>
 #include <trace/hooks/signal.h>
-#include <../../android/binder_internal.h>
+#include <../android/binder_internal.h>
 #include <linux/string.h>
 #include <linux/init.h>
 #include <linux/types.h>
@@ -690,7 +690,7 @@ static int __init start_rekernel(void)
 #ifdef NETWORK_FILTER
 	pr_info("NetFilter is enabled!\n");
 #endif
-	pr_info("Re:Kernel v8.0 | DEVELOPER: Sakion Team | Timeline | USER PORT: %d\n", USER_PORT);
+	pr_info("Re:Kernel v8.5 | DEVELOPER: Sakion Team | Timeline | USER PORT: %d\n", USER_PORT);
 	pr_info("Trying to create Re:Kernel Server......\n");
 
 	for (netlink_unit = NETLINK_REKERNEL_MIN; netlink_unit < NETLINK_REKERNEL_MAX; netlink_unit++) {
