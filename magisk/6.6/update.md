@@ -1,1 +1,2 @@
-向接入的应用报告RPC_NAME, Code字段
+移除消息计数，增加netlink消息处理，支持通过消息移除/proc/rekernel
+用户空间通过消息移除/proc/rekernel，预防被作为特征检测root
