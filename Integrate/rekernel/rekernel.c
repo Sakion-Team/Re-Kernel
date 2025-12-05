@@ -40,10 +40,12 @@ static const char* rpc_type[] = {
 	"SYNC_BINDER",
 	"FREE_BUFFER_FULL",
 };
-static int netlink_count = 0;
 static struct sock* netlink_socket;
 extern struct net init_net;
 static unsigned long netlink_unit = 0;
+#ifdef CONFIG_PROC_FS
+static struct proc_dir_entry* rekernel_dir, * rekernel_unit_entry;
+#endif /* CONFIG_PROC_FS */
 
 static int sendMessage(char* packet_buffer, uint16_t len) {
 	struct sk_buff* socket_buffer;
@@ -65,22 +67,21 @@ static int sendMessage(char* packet_buffer, uint16_t len) {
 	memcpy(nlmsg_data(netlink_hdr), packet_buffer, len);
 	return netlink_unicast(netlink_socket, socket_buffer, USER_PORT, MSG_DONTWAIT);
 }
-// Test code, Useless
 static void netlink_rcv_msg(struct sk_buff* socket_buffer) {
 	struct nlmsghdr* nlhdr = NULL;
 	char* umsg = NULL;
-	char* kmsg;
-	char netlink_kmsg[PACKET_SIZE];
 
 	if (socket_buffer->len >= nlmsg_total_size(0)) {
-		netlink_count++;
-		snprintf(netlink_kmsg, sizeof(netlink_kmsg), "Successfully received data packet! %d", netlink_count);
-		kmsg = netlink_kmsg;
 		nlhdr = nlmsg_hdr(socket_buffer);
 		umsg = NLMSG_DATA(nlhdr);
 		if (umsg) {
-			printk("kernel recv packet from user: %s\n", umsg);
-			sendMessage(kmsg, strlen(kmsg));
+#ifdef CONFIG_PROC_FS
+			if (!strcmp(umsg, "#proc_remove")) {
+				if (rekernel_dir) {
+					proc_remove(rekernel_dir);
+				}
+			}
+#endif /* CONFIG_PROC_FS */
 		}
 	}
 }
@@ -169,7 +170,6 @@ struct netlink_kernel_cfg cfg = {
 	.input = netlink_rcv_msg, // set recv callback
 };
 #ifdef CONFIG_PROC_FS
-static struct proc_dir_entry* rekernel_dir, * rekernel_unit_entry;
 static int rekernel_unit_show(struct seq_file* m, void* v) {
 	seq_printf(m, "%d\n", netlink_unit);
 	return LINE_SUCCESS;
@@ -206,7 +206,7 @@ static int start_rekernel(void) {
 		pr_err("Failed to create Re:Kernel server!\n");
 		return -LINE_ERROR;
 	}
-	printk("Created Re:Kernel server! NETLINK UNIT: %d\n", netlink_unit);
+	pr_info("Created Re:Kernel server! NETLINK UNIT: %d\n", netlink_unit);
 
 #ifdef CONFIG_PROC_FS
 	rekernel_dir = proc_mkdir("rekernel", NULL);
