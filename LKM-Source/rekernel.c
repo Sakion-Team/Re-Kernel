@@ -480,6 +480,8 @@ static unsigned int rekernel_pkg_ipv4_ipv6_in(void *priv, struct sk_buff *socket
 	uid_t uid;
 	uint hook;
 	struct net_device *dev = NULL;
+  struct tcphdr *th;
+  int data_len = 0;
 
 	if (!socket_buffer || !socket_buffer->len || !state)
 		return NF_ACCEPT;
@@ -492,12 +494,29 @@ static unsigned int rekernel_pkg_ipv4_ipv6_in(void *priv, struct sk_buff *socket
 		return NF_ACCEPT;
 
 	if (ip_hdr(socket_buffer)->version == 4) {
-		if (ip_hdr(socket_buffer)->protocol != IPPROTO_TCP)
+		struct iphdr *iph4 = ip_hdr(socket_buffer);
+		if (iph4->protocol != IPPROTO_TCP) {
 			return NF_ACCEPT;
+		}
+		if (!pskb_may_pull(socket_buffer, (iph4->ihl << 2) + sizeof(struct tcphdr))) {
+			return NF_ACCEPT;
+		}
+		// IPv4 下计算 TCP 指针和长度
+		th = (struct tcphdr *)((unsigned char *)iph4 + (iph4->ihl << 2));
+		data_len = ntohs(iph4->tot_len) - (iph4->ihl << 2) - (th->doff << 2);
 #if IS_ENABLED(CONFIG_IPV6)
 	} else if (ip_hdr(socket_buffer)->version == 6) {
-		if (ipv6_find_hdr(socket_buffer, &thoff, -1, &frag_off, NULL) != IPPROTO_TCP)
+		struct ipv6hdr *iph6 = ipv6_hdr(socket_buffer);
+		if (ipv6_find_hdr(socket_buffer, &thoff, -1, &frag_off, NULL) != IPPROTO_TCP) {
 			return NF_ACCEPT;
+		}
+		if (!pskb_may_pull(socket_buffer, thoff + sizeof(struct tcphdr))) {
+			return NF_ACCEPT;
+		}
+		// IPv6 下使用 thoff 定位 TCP 头
+		th = (struct tcphdr *)(skb_network_header(socket_buffer) + thoff);
+		// IPv6 长度计算：payload_len 不含 40 字节固定头
+		data_len = ntohs(iph6->payload_len) - (thoff - sizeof(struct ipv6hdr)) - (th->doff << 2);
 #endif
 	} else {
 		return NF_ACCEPT;
@@ -511,23 +530,27 @@ static unsigned int rekernel_pkg_ipv4_ipv6_in(void *priv, struct sk_buff *socket
 	if (uid < MIN_USERAPP_UID)
 		return NF_ACCEPT;
 
+	// 过滤掉纯 ACK (data_len <= 0) 且没有关键标志位的包
+	if (data_len <= 0 && !th->syn && !th->fin && !th->rst)
+		return NF_ACCEPT;
+
 #ifdef DEBUG
 	pr_info("[Re-Kernel LKM] Receive net data! target=%d\n", uid);
 #endif
 	if (netlink_socket != NULL) {
 		char binder_kmsg[PACKET_SIZE];
 		if (ip_hdr(socket_buffer)->version == 4) {
-			snprintf(binder_kmsg, sizeof(binder_kmsg), "type=Network,target=%d,proto=ipv4;", uid);
+			snprintf(binder_kmsg, sizeof(binder_kmsg), "type=Network,target=%d,proto=ipv4,data_len=%d;", uid, data_len);
 #if IS_ENABLED(CONFIG_IPV6)
 		} else if (ip_hdr(socket_buffer)->version == 6) {
-			snprintf(binder_kmsg, sizeof(binder_kmsg), "type=Network,target=%d,proto=ipv6;", uid);
+			snprintf(binder_kmsg, sizeof(binder_kmsg), "type=Network,target=%d,proto=ipv6,data_len=%d;", uid, data_len);
 #endif
 		} else {
 			return NF_ACCEPT;
 		}
 		sendMessage(binder_kmsg, strlen(binder_kmsg));
 	}
-	
+
 	return NF_ACCEPT;
 }
 
