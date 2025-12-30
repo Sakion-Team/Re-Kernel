@@ -6,6 +6,7 @@
 #if IS_ENABLED(CONFIG_IPV6)
 #include <net/ipv6.h>
 #endif /* IS_ENABLED(CONFIG_IPV6) */
+#include <linux/tcp.h>
 #include <linux/netlink.h>
 #include <linux/netfilter.h>
 #include <linux/netfilter_ipv4.h>
