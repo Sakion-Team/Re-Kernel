@@ -360,6 +360,6 @@ do_send_sig_info，通常位于 `kernel/signal.c`
 
 改完之后重新编译内核，Re:Kernel将会融入你的内核当中。
 
-##你可能会遇到的问题
+## 你可能会遇到的问题
 
 如果你遇到了JOBCTL_TRAP_FREEZE相关定义问题 那么你的内核backport了上游cgroup freezer v2 上游文件中缺少#include <linux/sched/jobctl.h> 导入 所以你将其添加至drivers/rekernel/rekernel.h顶部再次编译即可
