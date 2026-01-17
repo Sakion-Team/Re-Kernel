@@ -359,3 +359,6 @@ binder_alloc_new_buf_locked, usually in `drivers/android/binder_alloc.c`
 do_send_sig_info, usually in `kernel/signal.c`
 
 Finally, build your kernel again, Re:Kernel will be integrated into your kernel.
+
+## Problems you may encounter
+If you encounter issues related to the JOBCTL_TRAP_FREEZE definition, it's because your kernel backported the upstream cgroup freezer v2, and the upstream file is missing the #include <linux/sched/jobctl.h> import. So you can add it to the top of drivers/rekernel/rekernel.h and then recompile.
