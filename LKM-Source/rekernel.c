@@ -4,7 +4,7 @@
  * File name: rekernel.c
  * Description: rekernel module
  * Author: nep_timeline@outlook.com
- * Last Modification:  2025/12/03
+ * Last Modification:  2026/04/13
  */
 #include "linux/printk.h"
 #include <linux/module.h>
@@ -710,10 +710,7 @@ static int __init start_rekernel(void)
 #ifdef DEBUG
 	pr_info("Debug mode is enabled!\n");
 #endif
-#ifdef NETWORK_FILTER
-	pr_info("NetFilter is enabled!\n");
-#endif
-	pr_info("Re:Kernel v8.5 | DEVELOPER: Sakion Team | Timeline | USER PORT: %d\n", USER_PORT);
+	pr_info("Re:Kernel v8.5 | DEVELOPER: Sakion Team | USER PORT: %d\n", USER_PORT);
 	pr_info("Trying to create Re:Kernel Server......\n");
 
 	for (netlink_unit = NETLINK_REKERNEL_MIN; netlink_unit < NETLINK_REKERNEL_MAX; netlink_unit++) {
@@ -753,12 +750,10 @@ static int __init start_rekernel(void)
 		return LINE_ERROR;
 	}
 	
-#ifdef NETWORK_FILTER
 	if (register_netfilter() != LINE_SUCCESS) {
 		pr_err("%s: Failed to hook netfilter!\n", __func__);
 		return LINE_ERROR;
 	}
-#endif
 
 #ifdef CLEAN_UP_ASYNC_BINDER
 	if (register_kp() != LINE_SUCCESS) {
@@ -776,9 +771,7 @@ static void __exit exit_rekernel(void)
 	pr_info("Re-Kernel closing...\n");
 	unregister_binder();
 	unregister_signal();
-#ifdef NETWORK_FILTER
 	unregister_netfilter();
-#endif
 	unregister_kp();
 	netlink_kernel_release(netlink_socket);
 }
