@@ -480,8 +480,8 @@ static unsigned int rekernel_pkg_ipv4_ipv6_in(void *priv, struct sk_buff *socket
 	uid_t uid;
 	uint hook;
 	struct net_device *dev = NULL;
-  struct tcphdr *th;
-  int data_len = 0;
+    struct tcphdr *th;
+    int data_len = 0;
 
 	if (!socket_buffer || !socket_buffer->len || !state)
 		return NF_ACCEPT;
@@ -710,7 +710,7 @@ static int __init start_rekernel(void)
 #ifdef DEBUG
 	pr_info("Debug mode is enabled!\n");
 #endif
-	pr_info("Re:Kernel v8.5 | DEVELOPER: Sakion Team | USER PORT: %d\n", USER_PORT);
+	pr_info("Re:Kernel v8.6 | DEVELOPER: Sakion Team | USER PORT: %d\n", USER_PORT);
 	pr_info("Trying to create Re:Kernel Server......\n");
 
 	for (netlink_unit = NETLINK_REKERNEL_MIN; netlink_unit < NETLINK_REKERNEL_MAX; netlink_unit++) {
