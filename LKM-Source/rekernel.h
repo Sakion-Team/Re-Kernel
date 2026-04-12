@@ -7,6 +7,7 @@
 // #define KERNEL_6_1
 // #define KERNEL_6_6
 // #define KERNEL_6_12
+// #define KERNEL_6_18
 
 #define CLEAN_UP_ASYNC_BINDER
 
