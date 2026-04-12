@@ -197,7 +197,7 @@ void line_binder_reply(void *data, struct binder_proc *target_proc, struct binde
 	}
 }
 
-#if defined(KERNEL_6_1) || defined(KERNEL_6_6) || defined(KERNEL_6_12)
+#if defined(KERNEL_6_1) || defined(KERNEL_6_6) || defined(KERNEL_6_12) || defined(KERNEL_6_18)
 static long line_copy_from_user_nofault(void *dst, const void __user *src, size_t size)
 {
 	long ret = -EFAULT;
