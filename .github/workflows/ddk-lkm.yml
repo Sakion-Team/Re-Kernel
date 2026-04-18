@@ -1,0 +1,93 @@
+name: Build Re:Kernel Kernel Module
+
+on:
+  workflow_call:
+    inputs:
+      kmi:
+        description: 'KMI version'
+        required: true
+        type: string
+      ddk_release:
+        description: 'DDK release version'
+        required: false
+        default: '20260313'
+        type: string
+
+jobs:
+  build-rekernel-ko:
+    name: Build rekernel.ko for ${{ inputs.kmi }}
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/ylarod/ddk-min:${{ inputs.kmi }}-${{ inputs.ddk_release }}
+      options: --privileged
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v6
+
+      - name: Build rekernel.ko
+        run: |
+          git config --global --add safe.directory /__w/Re-Kernel/Re-Kernel
+          
+          KMI=${{ inputs.kmi }}
+          
+          # Map KMI to kernel version define
+          case "$KMI" in
+            android12-5.10|android13-5.10)
+              KERNEL_DEF="KERNEL_5_10"
+              ;;
+            android13-5.15|android14-5.15)
+              KERNEL_DEF="KERNEL_5_15"
+              ;;
+            android14-6.1)
+              KERNEL_DEF="KERNEL_6_1"
+              ;;
+            android15-6.6)
+              KERNEL_DEF="KERNEL_6_6"
+              ;;
+            android16-6.12)
+              KERNEL_DEF="KERNEL_6_12"
+              ;;
+            *)
+              echo "ERROR: Unknown KMI: $KMI"
+              exit 1
+              ;;
+          esac
+          
+          echo "=== Building rekernel.ko for KMI: $KMI (kernel define: $KERNEL_DEF) ==="
+          
+          # Copy source files to binder directory
+          cp ./LKM-Source/rekernel.c /opt/ddk/src/$KMI/drivers/android/
+          cp ./LKM-Source/rekernel.h /opt/ddk/src/$KMI/drivers/android/
+          
+          # Add rekernel to binder Makefile if not already present
+          if ! grep -q "obj-m += rekernel.o" /opt/ddk/src/$KMI/drivers/android/Makefile; then
+            echo "obj-m += rekernel.o" >> /opt/ddk/src/$KMI/drivers/android/Makefile
+          fi
+          
+          # Build
+          cd /opt/ddk/src/$KMI
+          make -C /opt/ddk/kdir/$KMI \
+            M=/opt/ddk/src/$KMI/drivers/android \
+            CONFIG_REKERNEL=m \
+            CC="clang -D$KERNEL_DEF" \
+            modules
+          
+          echo "=== Build completed ==="
+          
+          # Create output directory and copy artifact
+          mkdir -p /github/workspace/out
+          OUTPUT_NAME="${KMI}_rekernel.ko"
+          cp /opt/ddk/src/$KMI/drivers/android/rekernel.ko "/github/workspace/out/$OUTPUT_NAME"
+          
+          echo "Copied to: /github/workspace/out/$OUTPUT_NAME"
+          ls -la "/github/workspace/out/$OUTPUT_NAME"
+          echo "Size: $(du -h "/github/workspace/out/$OUTPUT_NAME" | cut -f1)"
+          llvm-strip -d "/github/workspace/out/$OUTPUT_NAME"
+          echo "Size after stripping: $(du -h "/github/workspace/out/$OUTPUT_NAME" | cut -f1)"
+
+      - name: Upload rekernel.ko artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ inputs.kmi }}_rekernel.ko
+          path: /github/workspace/out/${{ inputs.kmi }}_rekernel.ko
