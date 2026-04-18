@@ -31,30 +31,7 @@ jobs:
           
           KMI=${{ inputs.kmi }}
           
-          # Map KMI to kernel version define
-          case "$KMI" in
-            android12-5.10|android13-5.10)
-              KERNEL_DEF="KERNEL_5_10"
-              ;;
-            android13-5.15|android14-5.15)
-              KERNEL_DEF="KERNEL_5_15"
-              ;;
-            android14-6.1)
-              KERNEL_DEF="KERNEL_6_1"
-              ;;
-            android15-6.6)
-              KERNEL_DEF="KERNEL_6_6"
-              ;;
-            android16-6.12)
-              KERNEL_DEF="KERNEL_6_12"
-              ;;
-            *)
-              echo "ERROR: Unknown KMI: $KMI"
-              exit 1
-              ;;
-          esac
-          
-          echo "=== Building rekernel.ko for KMI: $KMI (kernel define: $KERNEL_DEF) ==="
+          echo "=== Building rekernel.ko for KMI: $KMI ==="
           
           # Copy source files to binder directory
           cp ./LKM-Source/rekernel.c /opt/ddk/src/$KMI/drivers/android/
@@ -70,7 +47,7 @@ jobs:
           make -C /opt/ddk/kdir/$KMI \
             M=/opt/ddk/src/$KMI/drivers/android \
             CONFIG_REKERNEL=m \
-            CC="clang -D$KERNEL_DEF" \
+            CC="clang" \
             modules
           
           echo "=== Build completed ==="
