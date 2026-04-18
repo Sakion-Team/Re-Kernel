@@ -1,14 +1,6 @@
 #ifndef REKERNEL_H
 #define REKERNEL_H
 
-// define on your own
-// #define KERNEL_5_10
-// #define KERNEL_5_15
-// #define KERNEL_6_1
-// #define KERNEL_6_6
-// #define KERNEL_6_12
-// #define KERNEL_6_18
-
 #define CLEAN_UP_ASYNC_BINDER
 
 #define MIN_USERAPP_UID                 (10000)
