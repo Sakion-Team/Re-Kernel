@@ -4,7 +4,7 @@
  * File name: rekernel.c
  * Description: rekernel module
  * Author: nep_timeline@outlook.com
- * Last Modification:  2026/04/13
+ * Last Modification:  2026/04/18
  */
 #include "linux/printk.h"
 #include <linux/module.h>
