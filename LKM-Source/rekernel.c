@@ -26,7 +26,7 @@
 #include <linux/types.h>
 #include <net/sock.h>
 #include <linux/netlink.h>
-
+#include <linux/version.h>
 #include <linux/netfilter.h>
 #include <linux/netfilter_ipv4.h>
 #include <linux/netfilter_ipv6.h>
@@ -80,16 +80,16 @@ spinlock_t rekernel_map_lock; /* two maps use the same spinlock */
 
 static inline bool rekernel_is_frozen_state_compatible(struct task_struct *task)
 {
-#if defined(KERNEL_5_10) || defined(KERNEL_5_15)
-	return frozen(task);
-#else
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0))
 	return READ_ONCE(task->__state) & TASK_FROZEN;
+#else
+	return frozen(task);
 #endif
 }
 
 static inline bool rekernel_is_jobctl_frozen_compatible(struct task_struct *task)
 {
-#ifdef KERNEL_5_10
+#if (LINUX_VERSION_CODE <= KERNEL_VERSION(5, 10, 0))
 	return cgroup_task_freeze(task);
 #else
 	return ((task->jobctl & JOBCTL_TRAP_FREEZE) != 0);
@@ -98,7 +98,14 @@ static inline bool rekernel_is_jobctl_frozen_compatible(struct task_struct *task
 
 static inline bool line_is_frozen(struct task_struct *task)
 {
-	return (cgroup_task_frozen(task) || rekernel_is_jobctl_frozen_compatible(task) || rekernel_is_frozen_state_compatible(task->group_leader) || freezing(task->group_leader));
+	if (cgroup_task_frozen(task) || rekernel_is_jobctl_frozen_compatible(task))
+		return true;
+	
+	/* if task->group_leader is NULL, unfreeze it to avoid some unknown problems */
+	if (NULL == task->group_leader)
+		return true;
+
+	return rekernel_is_frozen_state_compatible(task->group_leader) || freezing(task->group_leader);
 }
 
 static int sendMessage(char *packet_buffer, uint16_t len)
@@ -123,16 +130,16 @@ static int sendMessage(char *packet_buffer, uint16_t len)
     return netlink_unicast(netlink_socket, socket_buffer, USER_PORT, MSG_DONTWAIT);
 }
 
-#if defined(KERNEL_5_15) || defined(KERNEL_6_1)
-void line_binder_alloc_new_buf_locked(void *data, size_t size, size_t *free_async_space, int is_async)
-#elif defined(KERNEL_5_10)
-void line_binder_alloc_new_buf_locked(void *data, size_t size, struct binder_alloc *alloc, int is_async)
-#else
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0))
 void line_binder_alloc_new_buf_locked(void *data, size_t size, size_t *free_async_space, int is_async, bool *should_fail)
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 15, 0))
+void line_binder_alloc_new_buf_locked(void *data, size_t size, size_t *free_async_space, int is_async)
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0))
+void line_binder_alloc_new_buf_locked(void *data, size_t size, struct binder_alloc *alloc, int is_async)
 #endif
 {
 	struct task_struct *p = NULL;
-#ifndef KERNEL_5_10
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 15, 0))
 	struct binder_alloc *alloc = NULL;
 
 	alloc = container_of(free_async_space, struct binder_alloc, free_async_space);
@@ -162,12 +169,12 @@ void line_binder_alloc_new_buf_locked(void *data, size_t size, size_t *free_asyn
 struct hlist_head *binder_procs = NULL;
 struct mutex *binder_procs_lock = NULL;
 
-#if defined(KERNEL_5_10) || defined(KERNEL_5_15) || defined(KERNEL_6_1)
-void line_binder_preset(void *data, struct hlist_head *hhead,
-	struct mutex *lock)
-#else
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0))
 void line_binder_preset(void *data, struct hlist_head *hhead,
 	struct mutex *lock, struct binder_proc *proc)
+#else
+void line_binder_preset(void *data, struct hlist_head *hhead,
+	struct mutex *lock)
 #endif
 {
 	if (binder_procs == NULL)
@@ -197,7 +204,7 @@ void line_binder_reply(void *data, struct binder_proc *target_proc, struct binde
 	}
 }
 
-#if defined(KERNEL_6_1) || defined(KERNEL_6_6) || defined(KERNEL_6_12) || defined(KERNEL_6_18)
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0))
 static long line_copy_from_user_nofault(void *dst, const void __user *src, size_t size)
 {
 	long ret = -EFAULT;
@@ -214,10 +221,10 @@ static long line_copy_from_user_nofault(void *dst, const void __user *src, size_
 
 static long line_copy_from_user_compatible(void *dst, const void __user *src, size_t size)
 {
-#if defined(KERNEL_5_10) || defined(KERNEL_5_15)
-	return copy_from_user(dst, src, size);
-#else
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0))
 	return line_copy_from_user_nofault(dst, src, size);
+#else
+	return copy_from_user(dst, src, size);
 #endif
 }
 
