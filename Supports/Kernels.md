@@ -25,9 +25,11 @@
 | GKI | UPSIDE_DOWN_CAKE | ETO | 6.1.x | [ETO-妖刀](http://www.coolapk.com/u/2749672) | (✔) | N/A | N/A |
 | GKI | TIRAMISU | ETO | 5.15.x | [ETO-妖刀](http://www.coolapk.com/u/2749672) | (✔) | N/A | N/A |
 | GKI | Android S | ETO | 5.10.x | [ETO-妖刀](http://www.coolapk.com/u/2749672) | (✔) | N/A | N/A |
-| GKI | Android S | Marisa | 5.10.x | [Laulan56](https://github.com/Laulan56) | (✓) VER ≥ R5 | [Link](https://gitea.com/Laulan56/MarisaKernel_Marble-release) | N/A |
-| GKI | Android S | O+ Kernel | 5.10.x - 6.12.x | [OPPO Team](https://github.com/orgs/OnePlusOSS) | (✔) | OTA ROM | [Link](https://github.com/orgs/OnePlusOSS/repositories) |
-| GKI | Android S | Pixel Kernel | 5.10.x | Google Team | (✘) | N/A | N/A |
+| GKI | Android S | Marisa | 5.10.x | [Laulan56](https://github.com/Laulan56) | (✔) VER ≥ R5 | [Link](https://gitea.com/Laulan56/MarisaKernel_Marble-release) | N/A |
+| GKI | Android S - BAKLAVA | O+ Kernel | 5.10.x - 6.12.x | [OPPO Team](https://github.com/OnePlusOSS) | (✔) | OTA ROM | [Link](https://github.com/orgs/OnePlusOSS/repositories) |
+| GKI | Android S - BAKLAVA | MIUI/HyperOS Kernel | 5.10.x - 6.12.x | [Xiaomi Team](https://github.com/MiCode) | (✔) | OTA ROM | [Link](https://github.com/MiCode/Xiaomi_Kernel_OpenSource) |
+| GKI | TIRAMISU - BAKLAVA | Pixel Kernel | 5.15.x - 6.12.x | Google Team | (✔) | N/A | N/A |
+| GKI | Android S | Pixel Kernel | 5.10.x | Google Team | (?) | N/A | N/A |
 | GKI | Android S | VIVO Kernel | 5.10.x - 6.12.x | VIVO TEAM | (✘) | N/A | N/A |
 | GKI | Android S | HarmonyOS Kernel | 5.10.x | HUAWEI TEAM | (✘) | N/A | N/A |
 | GKI | TIRAMISU | ZTC | 5.15.x | [ztc1997](https://github.com/ztc1997) | (✔) | N/A | [Link](https://github.com/ztc1997/android_gki_kernel_5.15_common) |
