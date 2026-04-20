@@ -1,7 +1,7 @@
 id=re_kernel
 name=Re:Kernel
-version=v8.6
-versionCode=86
+version=v8.7
+versionCode=87
 author=Sakion Team
 description=在开机后加载Re:Kernel模块至系统
 updateJson=https://raw.githubusercontent.com/Sakion-Team/Re-Kernel/main/magisk/update.json
