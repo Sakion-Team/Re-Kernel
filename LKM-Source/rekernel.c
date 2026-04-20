@@ -717,7 +717,7 @@ static int __init start_rekernel(void)
 #ifdef DEBUG
 	pr_info("Debug mode is enabled!\n");
 #endif
-	pr_info("Re:Kernel v8.6 | DEVELOPER: Sakion Team | USER PORT: %d\n", USER_PORT);
+	pr_info("Re:Kernel v8.7 | DEVELOPER: Sakion Team | USER PORT: %d\n", USER_PORT);
 	pr_info("Trying to create Re:Kernel Server......\n");
 
 	for (netlink_unit = NETLINK_REKERNEL_MIN; netlink_unit < NETLINK_REKERNEL_MAX; netlink_unit++) {
