@@ -1,6 +1,6 @@
 {
-  "version": "v8.6",
-  "versionCode": 86,
+  "version": "v8.7",
+  "versionCode": 87,
   "zipUrl": "https://github.com/Sakion-Team/Re-Kernel/releases/download/releases/Re-Kernel-v8.6.zip",
   "changelog": "https://raw.githubusercontent.com/Sakion-Team/Re-Kernel/main/magisk/update.md"
 }
