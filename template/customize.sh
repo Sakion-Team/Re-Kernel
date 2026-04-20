@@ -1,45 +1,47 @@
 SKIPUNZIP=0
-
 KERNEL_VERSION=$(uname -r)
+ui_print "- 当前系统内核: $KERNEL_VERSION"
 
-ui_print "当前内核版本: $KERNEL_VERSION"
+CORE_VER=${KERNEL_VERSION%%-*}
+CORE_VER=${CORE_VER%.*}
 
-if [[ "$KERNEL_VERSION" == *"6.12"* ]]; then
-    ui_print "检测到内核版本为 android16-6.12"
-    cp $MODPATH/lib/android16-6.12-lkmloader.ko $MODPATH/lkm-loader.ko
-    cp $MODPATH/lkm/android16-6.12_rekernel.ko $MODPATH/re-kernel.ko
-elif [[ "$KERNEL_VERSION" == *"6.6"* ]]; then
-    ui_print "检测到内核版本为 android15-6.6"
-    cp $MODPATH/lib/android15-6.6-lkmloader.ko $MODPATH/lkm-loader.ko
-    cp $MODPATH/lkm/android15-6.6_rekernel.ko $MODPATH/re-kernel.ko
-elif [[ "$KERNEL_VERSION" == *"14"* && "$KERNEL_VERSION" == *"6.1"* ]]; then
-    ui_print "检测到内核版本为 android14-6.1"
-    cp $MODPATH/lib/android14-6.1-lkmloader.ko $MODPATH/lkm-loader.ko
-    cp $MODPATH/lkm/android14-6.1_rekernel.ko $MODPATH/re-kernel.ko
-elif [[ "$KERNEL_VERSION" == *"14"* && "$KERNEL_VERSION" == *"5.15"* ]]; then
-    ui_print "检测到内核版本为 android14-14-5.15"
-    cp $MODPATH/lib/android14-5.15-lkmloader.ko $MODPATH/lkm-loader.ko
-    cp $MODPATH/lkm/android14-5.15_rekernel.ko $MODPATH/re-kernel.ko
-elif [[ "$KERNEL_VERSION" == *"13"* && "$KERNEL_VERSION" == *"5.15"* ]]; then
-    ui_print "检测到内核版本为 android13-13-5.15"
-    cp $MODPATH/lib/android13-5.15-lkmloader.ko $MODPATH/lkm-loader.ko
-    cp $MODPATH/lkm/android13-5.15_rekernel.ko $MODPATH/re-kernel.ko
-elif [[ "$KERNEL_VERSION" == *"13"* && "$KERNEL_VERSION" == *"5.10"* ]]; then
-    ui_print "检测到内核版本为 android13-13-5.10"
-    cp $MODPATH/lib/android13-5.10-lkmloader.ko $MODPATH/lkm-loader.ko
-    cp $MODPATH/lkm/android13-5.10_rekernel.ko $MODPATH/re-kernel.ko
-elif [[ "$KERNEL_VERSION" == *"12"* && "$KERNEL_VERSION" == *"5.10"* ]]; then
-    ui_print "检测到内核版本为 android12-12-5.10"
-    cp $MODPATH/lib/android12-5.10-lkmloader.ko $MODPATH/lkm-loader.ko
-    cp $MODPATH/lkm/android12-5.10_rekernel.ko $MODPATH/re-kernel.ko
+AND_VER=${KERNEL_VERSION#*-android}
+AND_VER=${AND_VER%%-*}
+
+SUPPORTED_VERS=""
+for file in "$MODPATH/module"/*_rekernel.ko; do
+    name=${file##*/} 
+    SUPPORTED_VERS="$SUPPORTED_VERS ${name%_rekernel.ko}"
+done
+
+TEMP_VER="android${AND_VER}-${CORE_VER}"
+
+if [ -f "$MODPATH/module/${TEMP_VER}_rekernel.ko" ] && [ -f "$MODPATH/loader/${TEMP_VER}-lkmloader.ko" ]; then
+    TARGET_VER="$TEMP_VER"
+elif [[ "$CORE_VER" == "5.10" ]]; then
+    TARGET_VER="android12-5.10"
+elif [[ "$CORE_VER" == "5.15" ]]; then
+    TARGET_VER="android13-5.15"
+elif [[ "$CORE_VER" == "6.1" ]]; then
+    TARGET_VER="android14-6.1"
+elif [[ "$CORE_VER" == "6.6" ]]; then
+    TARGET_VER="android15-6.6"
+elif [[ "$CORE_VER" == "6.12" ]]; then
+    TARGET_VER="android16-6.12"
 else
-    abort "无法匹配到支持的内核版本，请手动检查内核版本并选择相应的模块"
+    abort "! 自动匹配失败，请查看安装脚本并自行修改"
 fi
 
-rm -rf $MODPATH/lib
-rm -rf $MODPATH/lkm
+ui_print "- 自动匹配成功: $TARGET_VER"
+LKM_SRC="$MODPATH/loader/${TARGET_VER}-lkmloader.ko"
+REK_SRC="$MODPATH/module/${TARGET_VER}_rekernel.ko"
+cp "$LKM_SRC" "$MODPATH/lkm-loader.ko"
+cp "$REK_SRC" "$MODPATH/re-kernel.ko"
 
-set_perm $MODPATH/lkm-loader.ko 0 0 0755
-set_perm $MODPATH/re-kernel.ko 0 0 0755
+rm -rf $MODPATH/loader
+rm -rf $MODPATH/module
 
-ui_print "操作完成！内核端口ID: 100"
+set_perm "$MODPATH/lkm-loader.ko" 0 0 0755
+set_perm "$MODPATH/re-kernel.ko" 0 0 0755
+
+ui_print "- 操作完成！内核端口ID: 100"
