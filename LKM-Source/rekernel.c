@@ -256,7 +256,7 @@ void line_binder_transaction(void *data, struct binder_proc *target_proc, struct
 		&& target_proc
 		&& (NULL != target_proc->tsk)
 		&& (NULL != proc->tsk)
-		&& (task_uid(target_proc->tsk).val >= MIN_USERAPP_UID)
+		&& (task_uid(target_proc->tsk).val > MIN_USERAPP_UID)
 		&& (proc->pid != target_proc->pid)
 		&& line_is_frozen(target_proc->tsk)) {
 #ifdef DEBUG
@@ -273,7 +273,7 @@ void line_binder_transaction(void *data, struct binder_proc *target_proc, struct
 		&& target_proc
 		&& (NULL != target_proc->tsk)
 		&& (NULL != proc->tsk)
-		&& (task_uid(target_proc->tsk).val >= MIN_USERAPP_UID)
+		&& (task_uid(target_proc->tsk).val > MIN_USERAPP_UID)
 		&& (proc->pid != target_proc->pid)
 		&& line_is_frozen(target_proc->tsk)) {
 		buf_data_size = tr->data_size > INTERFACETOKEN_BUFF_SIZE ? INTERFACETOKEN_BUFF_SIZE : tr->data_size;
