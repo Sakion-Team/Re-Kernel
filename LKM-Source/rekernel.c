@@ -657,13 +657,11 @@ static void netlink_rcv_msg(struct sk_buff *socket_buffer)
 	struct nlmsghdr *nlhdr;
 	struct rekernel_cmd *cmd;
 
-	if (socket_buffer->len < nlmsg_total_size(0))
+	if (socket_buffer->len < nlmsg_total_size(sizeof(struct rekernel_cmd)))
 		return;
 
 	nlhdr = nlmsg_hdr(socket_buffer);
 	cmd = NLMSG_DATA(nlhdr);
-	if (!cmd)
-		return;
 
 #ifdef DEBUG
 	pr_info("Re-Kernel_netlink recv cmd type=%d\n", cmd->type);
@@ -698,7 +696,9 @@ static void netlink_rcv_msg(struct sk_buff *socket_buffer)
 		break;
 	}
 	default:
+#ifdef DEBUG
 		pr_warn("Re-Kernel unknown cmd type=%d\n", cmd->type);
+#endif
 		break;
 	}
 }
