@@ -13,4 +13,21 @@
 #define LINE_ERROR                      (-1)
 #define LINE_SUCCESS                    (0)
 
+/* command types from userspace */
+enum rekernel_cmd_type {
+	REKERNEL_CMD_REMOVE_PROC = 1,
+	REKERNEL_CMD_MONITOR_NET = 2,
+};
+
+struct rekernel_monitor_net_args {
+	int uid;
+};
+
+struct rekernel_cmd {
+	int type;
+	union {
+		struct rekernel_monitor_net_args monitor_net;
+	};
+};
+
 #endif
