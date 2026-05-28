@@ -2,7 +2,9 @@ public class ReKernel {
     private static boolean isRunning = false;
     private static final int NETLINK_UNIT_DEFAULT = 22;
     private static final int NETLINK_UNIT_MAX = 26;
-    private static final Handler rekernel = new Handler(new HandlerThread("ReKernel").getLooper());
+    private static final int SOCKET_RECV_BUFSIZE = 64 * 1024;
+    private static final int DEFAULT_RECV_BUFSIZE = 8 * 1024;
+    private static final Handler rekernel = new Handler(new HandlerThread("Re-Kernel").getLooper());
     private static final ExecutorService executorService = Executors.newSingleThreadExecutor();
 
     private static Map<String, String> parseParams(String message) {
@@ -16,22 +18,25 @@ public class ReKernel {
     }
 
     private static int StringToInteger(String str) {
-        String data = str.trim();
-        StringBuilder result = new StringBuilder();
-        for (int i = 0; i < data.length(); i++) {
-            char c = data.charAt(i);
-            if (Character.isDigit(c))
-                result.append(c);
-        }
+        if (str == null || str.isEmpty())
+            return -1;
 
         try {
+            String data = str.trim();
+            StringBuilder result = new StringBuilder();
+            for (int i = 0; i < data.length(); i++) {
+                char c = data.charAt(i);
+                if (Character.isDigit(c))
+                    result.append(c);
+            }
+
             return Integer.parseInt(result.toString());
         } catch (NumberFormatException ignored) {
             return -1;
         }
     }
 
-    public static void start() {
+    public static void start(ClassLoader classLoader) {
         if (isRunning)
             return;
 
@@ -54,27 +59,65 @@ public class ReKernel {
                     } else netlinkUnit = NETLINK_UNIT_DEFAULT;
                 }
 
-                try (NetlinkClient netlinkClient = new NetlinkClient(netlinkUnit)) {
-                    if (!netlinkClient.getMDescriptor().valid()) {
-                        // 连接失败
-                        return;
+                FileDescriptor descriptor = Os.socket(OsConstants.AF_NETLINK, OsConstants.SOCK_DGRAM, netlinkUnit);
+
+                Class<?> libcore = CakeReflection.findClass("libcore.io.Libcore", classLoader);
+                Object os = CakeReflection.getStaticObjectField(libcore, "os");
+                CakeReflection.callMethod(os, "setsockoptInt", descriptor, OsConstants.SOL_SOCKET, OsConstants.SO_RCVBUF, SOCKET_RECV_BUFSIZE);
+
+                if (!descriptor.valid()) {
+                    CakeReflection.callStaticMethod(CakeReflection.findClass("libcore.io.IoUtils", classLoader), "closeQuietly", descriptor);
+                    // 连接失败
+                    return;
+                }
+
+                Os.bind(descriptor, (SocketAddress) CakeReflection.newInstance(CakeReflection.findClass("android.system.NetlinkSocketAddress", classLoader), 100, 0));
+
+                isRunning = true;
+
+                // 连接成功
+
+                try {
+                    byte[] message = "#proc_remove\u0000".getBytes(StandardCharsets.UTF_8);
+                    byte[] bytes = new byte[16 + message.length];
+                    ByteBuffer byteBuffer = ByteBuffer.wrap(bytes);
+                    byteBuffer.order(ByteOrder.nativeOrder());
+
+                    byteBuffer.putInt(bytes.length);
+                    byteBuffer.putShort((short) 0x11);
+                    byteBuffer.putShort((short) 0x1);
+                    byteBuffer.putInt(1);
+                    byteBuffer.putInt(100);
+
+                    byteBuffer.put(message);
+
+                    try {
+                        Os.write(descriptor, bytes, 0, bytes.length);
+                    } catch (ErrnoException _) {
                     }
+                } catch (Throwable throwable) {
+                    // 销毁/proc/rekernel目录失败
+                }
 
-                    netlinkClient.bind((SocketAddress) new NetlinkSocketAddress(100).toInstance());
+                while (true) {
+                    try {
+                        ByteBuffer byteBuffer = ByteBuffer.allocate(DEFAULT_RECV_BUFSIZE);
+                        int length = Os.read(descriptor, byteBuffer);
+                        if (length == DEFAULT_RECV_BUFSIZE)
+                            Log.w("maximum read");
+                        byteBuffer.position(0);
+                        byteBuffer.limit(length);
+                        byteBuffer.order(ByteOrder.nativeOrder());
+                        String data = new String(byteBuffer.array(), byteBuffer.position(), byteBuffer.limit(), StandardCharsets.UTF_8);
+                        if (!data.isEmpty()) {
+                            Map<String, String> params = parseParams(data.substring(data.indexOf("type"), data.lastIndexOf(";")));
+                            rekernel.post(() -> {
+                                String type = params.get("type");
+                                if (type == null)
+                                    return;
 
-                    isRunning = true;
-
-                    // 连接成功
-
-                    while (true) {
-                        try {
-                            ByteBuffer byteBuffer = netlinkClient.recvMessage();
-                            String data = new String(byteBuffer.array(), byteBuffer.position(), byteBuffer.limit(), StandardCharsets.UTF_8);
-                            if (!data.isEmpty()) {
-                                Map<String, String> params = parseParams(data.substring(data.indexOf("type"), data.lastIndexOf(";")));
-                                rekernel.post(() -> {
-                                    String type = params.get("type");
-                                    if (type.equals("Binder")) {
+                                switch (type) {
+                                    case "Binder" -> {
                                         String bindertype = params.get("bindertype");
                                         int oneway = StringToInteger(params.get("oneway"));
                                         int fromPid = StringToInteger(params.get("from_pid"));
@@ -84,25 +127,27 @@ public class ReKernel {
                                         int rpcName = params.get("rpc_name");
                                         int code = StringToInteger(params.get("code"));
                                         // 你的代码
-                                    } else if (type.equals("Signal")) {
+                                    }
+                                    case "Signal" -> {
                                         int targetPid = StringToInteger(params.get("dst_pid"));
                                         int targetUid = StringToInteger(params.get("dst"));
                                         int killerPid = StringToInteger(params.get("killer_pid"));
                                         int killerUid = StringToInteger(params.get("killer"));
                                         int signal = StringToInteger(params.get("signal"));
                                         // 你的代码
-                                    } else if (type.equals("Network")) {
+                                    }
+                                    case "Network" -> {
                                         int targetUid = StringToInteger(params.get("target"));
                                         String proto = params.get("proto");
                                         // 你的代码
                                     }
-                                });
-                            }
-                        } catch (ErrnoException | InterruptedIOException | NumberFormatException ignored) {
-
-                        } catch (Exception e) {
-                            // 出现异常
+                                }
+                            });
                         }
+                    } catch (ErrnoException | InterruptedIOException | NumberFormatException ignored) {
+
+                    } catch (Exception e) {
+                        // 出现异常
                     }
                 }
             } catch (ErrnoException | IOException e) {
