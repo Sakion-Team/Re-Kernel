@@ -521,7 +521,8 @@ static unsigned int rekernel_pkg_ipv4_ipv6_in(void *priv, struct sk_buff *socket
 		return NF_ACCEPT;
 
 	uid = line_sock2uid(sk);
-
+	if (uid < MIN_USERAPP_UID) return NF_ACCEPT;
+	
 	{
 		bool monitored;
 		spin_lock_bh(&rekernel_map_lock);
