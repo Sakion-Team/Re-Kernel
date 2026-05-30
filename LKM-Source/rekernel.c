@@ -4,7 +4,7 @@
  * File name: rekernel.c
  * Description: rekernel module
  * Author: nep_timeline@outlook.com
- * Last Modification:  2026/05/28
+ * Last Modification:  2026/05/30
  */
 #include "linux/printk.h"
 #include <linux/module.h>
@@ -784,7 +784,7 @@ static int __init start_rekernel(void)
 #ifdef DEBUG
 	pr_info("Debug mode is enabled!\n");
 #endif
-	pr_info("Re:Kernel v9.0 | DEVELOPER: Sakion Team | USER PORT: %d\n", USER_PORT);
+	pr_info("Re:Kernel v9.1 | DEVELOPER: Sakion Team | USER PORT: %d\n", USER_PORT);
 	pr_info("Trying to create Re:Kernel Server......\n");
 
 	for (netlink_unit = NETLINK_REKERNEL_MIN; netlink_unit < NETLINK_REKERNEL_MAX; netlink_unit++) {
