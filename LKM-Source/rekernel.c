@@ -48,7 +48,6 @@
 #define USER_PORT        				100
 #define PACKET_SIZE 					256
 
-char netlink_kmsg[PACKET_SIZE];
 struct sock *netlink_socket = NULL;
 extern struct net init_net;
 int netlink_unit = NETLINK_REKERNEL_MIN;
@@ -59,34 +58,21 @@ static void (*re_binder_alloc_free_buf)(struct binder_alloc* alloc, struct binde
 static struct binder_stats(*re_binder_stats);
 static struct proc_dir_entry *rekernel_dir, *rekernel_unit_entry;
 
-/* hashmap for monitored uids */
-#define REKERNEL_UID_HASH_BITS 6
-static DEFINE_HASHTABLE(rekernel_uid_map, REKERNEL_UID_HASH_BITS);
+/* hashmap for net monitor uids */
+#define REKERNEL_NET_UID_HASH_BITS 6
+static DEFINE_HASHTABLE(rekernel_net_uid_map, REKERNEL_NET_UID_HASH_BITS);
 struct uid_info {
 	uid_t uid;
 	struct hlist_node hnode;
 };
 
-/* hashmap for persitent uids */
-#define REKERNEL_P_UID_HASH_BITS 5
-static DEFINE_HASHTABLE(rekernel_p_uid_map, REKERNEL_P_UID_HASH_BITS);
-struct p_uid_info {
-	uid_t uid;
-	unsigned long last_arrival_time; /* jiffies */
-	struct hlist_node hnode;
-};
-
-/* hashmap for net monitor uids */
-#define REKERNEL_NET_UID_HASH_BITS 6
-static DEFINE_HASHTABLE(rekernel_net_uid_map, REKERNEL_NET_UID_HASH_BITS);
-
-spinlock_t rekernel_map_lock; /* maps share the same spinlock */
+static DEFINE_MUTEX(rekernel_net_uid_mutex);
 
 static bool net_uid_monitored(uid_t uid)
 {
 	struct uid_info *entry;
 
-	hash_for_each_possible(rekernel_net_uid_map, entry, hnode, uid) {
+	hash_for_each_possible_rcu(rekernel_net_uid_map, entry, hnode, uid) {
 		if (entry->uid == uid)
 			return true;
 	}
@@ -494,93 +480,108 @@ static inline uid_t line_sock2uid(struct sock *sk)
 }
 
 static unsigned int rekernel_pkg_ipv4_ipv6_in(void *priv, struct sk_buff *socket_buffer,
-		const struct nf_hook_state *state)
+   const struct nf_hook_state *state)
 {
-	struct sock *sk;
-	unsigned int thoff = 0;
-	unsigned short frag_off = 0;
-	uid_t uid;
-	uint hook;
-	struct net_device *dev = NULL;
-    struct tcphdr *th;
-    int data_len = 0;
+  struct sock *sk;
+  unsigned int thoff = 0;
+  unsigned short frag_off = 0;
+  uid_t uid;
+  uint hook;
+  struct net_device *dev = NULL;
+  struct tcphdr *th;
+  int data_len = 0;
+  bool monitored;
 
-	if (!socket_buffer || !socket_buffer->len || !state)
-		return NF_ACCEPT;
+  if (!socket_buffer || !socket_buffer->len || !state)
+   return NF_ACCEPT;
 
-	hook = state->hook;
-	if (NF_INET_LOCAL_IN == hook)
-		dev = state->in;
+  hook = state->hook;
+  if (NF_INET_LOCAL_IN == hook)
+   dev = state->in;
 
-	if (NULL == dev)
-		return NF_ACCEPT;
+  if (NULL == dev)
+   return NF_ACCEPT;
 
-	/* uid check first — avoid expensive IP parsing for unmonitored sockets */
-	sk = skb_to_full_sk(socket_buffer);
-	if (sk == NULL || !sk_fullsock(sk))
-		return NF_ACCEPT;
+  sk = skb_to_full_sk(socket_buffer);
+  if (sk == NULL || !sk_fullsock(sk))
+   return NF_ACCEPT;
 
-	uid = line_sock2uid(sk);
-	if (uid < MIN_USERAPP_UID) return NF_ACCEPT;
-	
-	{
-		bool monitored;
-		spin_lock_bh(&rekernel_map_lock);
-		monitored = net_uid_monitored(uid);
-		spin_unlock_bh(&rekernel_map_lock);
-		if (!monitored)
-			return NF_ACCEPT;
-	}
+  uid = line_sock2uid(sk);
+  if (uid < MIN_USERAPP_UID) return NF_ACCEPT;
 
-	if (ip_hdr(socket_buffer)->version == 4) {
-		struct iphdr *iph4 = ip_hdr(socket_buffer);
-		if (iph4->protocol != IPPROTO_TCP) {
-			return NF_ACCEPT;
-		}
-		if (!pskb_may_pull(socket_buffer, (iph4->ihl << 2) + sizeof(struct tcphdr))) {
-			return NF_ACCEPT;
-		}
-		th = (struct tcphdr *)((unsigned char *)iph4 + (iph4->ihl << 2));
-		data_len = ntohs(iph4->tot_len) - (iph4->ihl << 2) - (th->doff << 2);
+  rcu_read_lock();
+  monitored = net_uid_monitored(uid);
+  rcu_read_unlock();
+  if (!monitored) return NF_ACCEPT;
+
+  if (ip_hdr(socket_buffer)->version == 4) {
+   struct iphdr *iph4;
+   unsigned int ip_hdr_len;
+
+   if (!pskb_may_pull(socket_buffer, sizeof(struct iphdr))) {
+    return NF_ACCEPT;
+   }
+
+   iph4 = ip_hdr(socket_buffer);
+   if (iph4->protocol != IPPROTO_TCP) {
+    return NF_ACCEPT;
+   }
+
+   ip_hdr_len = iph4->ihl << 2;
+   if (!pskb_may_pull(socket_buffer, ip_hdr_len + sizeof(struct tcphdr))) {
+    return NF_ACCEPT;
+   }
+
+   iph4 = ip_hdr(socket_buffer);
+   th = (struct tcphdr *)((unsigned char *)iph4 + ip_hdr_len);
+   data_len = ntohs(iph4->tot_len) - ip_hdr_len - (th->doff << 2);
+
 #if IS_ENABLED(CONFIG_IPV6)
-	} else if (ip_hdr(socket_buffer)->version == 6) {
-		struct ipv6hdr *iph6 = ipv6_hdr(socket_buffer);
-		if (ipv6_find_hdr(socket_buffer, &thoff, -1, &frag_off, NULL) != IPPROTO_TCP) {
-			return NF_ACCEPT;
-		}
-		if (!pskb_may_pull(socket_buffer, thoff + sizeof(struct tcphdr))) {
-			return NF_ACCEPT;
-		}
-		th = (struct tcphdr *)(skb_network_header(socket_buffer) + thoff);
-		data_len = ntohs(iph6->payload_len) - (thoff - sizeof(struct ipv6hdr)) - (th->doff << 2);
-#endif
-	} else {
-		return NF_ACCEPT;
-	}
+  } else if (ip_hdr(socket_buffer)->version == 6) {
+   struct ipv6hdr *iph6;
 
-	// 过滤掉纯 ACK (data_len <= 0) 且没有关键标志位的包
-	if (data_len <= 0 && !th->syn && !th->fin && !th->rst)
-		return NF_ACCEPT;
+   if (!pskb_may_pull(socket_buffer, sizeof(struct ipv6hdr))) {
+    return NF_ACCEPT;
+   }
+
+   if (ipv6_find_hdr(socket_buffer, &thoff, -1, &frag_off, NULL) != IPPROTO_TCP) {
+    return NF_ACCEPT;
+   }
+
+   if (!pskb_may_pull(socket_buffer, thoff + sizeof(struct tcphdr))) {
+    return NF_ACCEPT;
+   }
+
+   iph6 = ipv6_hdr(socket_buffer);
+   th = (struct tcphdr *)(skb_network_header(socket_buffer) + thoff);
+   data_len = ntohs(iph6->payload_len) - (thoff - sizeof(struct ipv6hdr)) - (th->doff << 2);
+#endif
+  } else {
+   return NF_ACCEPT;
+  }
+
+  if (data_len <= 0 && !th->syn && !th->fin && !th->rst)
+   return NF_ACCEPT;
 
 #ifdef DEBUG
-	pr_info("[Re-Kernel LKM] Receive net data! target=%d\n", uid);
+  pr_info("[Re-Kernel LKM] Receive net data! target=%d\n", uid);
 #endif
-	if (netlink_socket != NULL) {
-		char binder_kmsg[PACKET_SIZE];
-		int len;
-		if (ip_hdr(socket_buffer)->version == 4) {
-			len = scnprintf(binder_kmsg, sizeof(binder_kmsg), "type=Network,target=%d,proto=ipv4,data_len=%d;", uid, data_len);
+  if (netlink_socket != NULL) {
+   char binder_kmsg[PACKET_SIZE];
+   int len;
+   if (ip_hdr(socket_buffer)->version == 4) {
+    len = scnprintf(binder_kmsg, sizeof(binder_kmsg), "type=Network,target=%d,proto=ipv4,data_len=%d;", uid, data_len);
 #if IS_ENABLED(CONFIG_IPV6)
-		} else if (ip_hdr(socket_buffer)->version == 6) {
-			len = scnprintf(binder_kmsg, sizeof(binder_kmsg), "type=Network,target=%d,proto=ipv6,data_len=%d;", uid, data_len);
+   } else if (ip_hdr(socket_buffer)->version == 6) {
+    len = scnprintf(binder_kmsg, sizeof(binder_kmsg), "type=Network,target=%d,proto=ipv6,data_len=%d;", uid, data_len);
 #endif
-		} else {
-			return NF_ACCEPT;
-		}
-		sendMessage(binder_kmsg, len);
-	}
+   } else {
+    return NF_ACCEPT;
+   }
+   sendMessage(binder_kmsg, len);
+  }
 
-	return NF_ACCEPT;
+  return NF_ACCEPT;
 }
 
 /* Only monitor input network packages */
@@ -619,6 +620,7 @@ void unregister_netfilter(void)
 	}
 	rtnl_unlock();
 
+	synchronize_rcu();
 	hash_for_each_safe(rekernel_net_uid_map, bkt, tmp, entry, hnode) {
 		hash_del(&entry->hnode);
 		kfree(entry);
@@ -630,9 +632,6 @@ int register_netfilter(void)
 	int rc = LINE_SUCCESS;
 	struct net *net = NULL;
 
-	spin_lock_init(&rekernel_map_lock);
-	hash_init(rekernel_uid_map);
-	hash_init(rekernel_p_uid_map);
 	hash_init(rekernel_net_uid_map);
 
 	rtnl_lock();
@@ -695,15 +694,15 @@ static void netlink_rcv_msg(struct sk_buff *socket_buffer)
 #ifdef DEBUG
 		pr_info("Re-Kernel monitorNet uid=%d\n", muid);
 #endif
-		spin_lock_bh(&rekernel_map_lock);
+		mutex_lock(&rekernel_net_uid_mutex);
 		if (!net_uid_monitored(muid)) {
-			struct uid_info *entry = kmalloc(sizeof(*entry), GFP_ATOMIC);
+			struct uid_info *entry = kmalloc(sizeof(*entry), GFP_KERNEL);
 			if (entry) {
 				entry->uid = muid;
-				hash_add(rekernel_net_uid_map, &entry->hnode, muid);
+				hash_add_rcu(rekernel_net_uid_map, &entry->hnode, muid);
 			}
 		}
-		spin_unlock_bh(&rekernel_map_lock);
+		mutex_unlock(&rekernel_net_uid_mutex);
 		break;
 	}
 	default:
@@ -784,7 +783,7 @@ static int __init start_rekernel(void)
 #ifdef DEBUG
 	pr_info("Debug mode is enabled!\n");
 #endif
-	pr_info("Re:Kernel v9.1 | DEVELOPER: Sakion Team | USER PORT: %d\n", USER_PORT);
+	pr_info("Re:Kernel v9.2 | DEVELOPER: Sakion Team | USER PORT: %d\n", USER_PORT);
 	pr_info("Trying to create Re:Kernel Server......\n");
 
 	for (netlink_unit = NETLINK_REKERNEL_MIN; netlink_unit < NETLINK_REKERNEL_MAX; netlink_unit++) {
