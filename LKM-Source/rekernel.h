@@ -19,15 +19,12 @@ enum rekernel_cmd_type {
 	REKERNEL_CMD_MONITOR_NET = 2,
 };
 
-struct rekernel_monitor_net_args {
-	int uid;
-};
-
 struct rekernel_cmd {
 	int type;
-	union {
-		struct rekernel_monitor_net_args monitor_net;
-	};
+};
+
+struct rekernel_monitor_net_args {
+	int uid;
 };
 
 #endif
