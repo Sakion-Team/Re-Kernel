@@ -681,7 +681,17 @@ static void netlink_rcv_msg(struct sk_buff *socket_buffer)
 		break;
 	case REKERNEL_CMD_MONITOR_NET:
 	{
-		uid_t muid = (uid_t)cmd->monitor_net.uid;
+		struct rekernel_monitor_net_args *args;
+		uid_t muid;
+
+		if (nlmsg_len(nlhdr) < sizeof(struct rekernel_cmd) + sizeof(struct rekernel_monitor_net_args)) {
+#ifdef DEBUG
+			pr_warn("Re-Kernel monitorNet error: payload too small\n");
+#endif
+			break;
+		}
+		args = (struct rekernel_monitor_net_args *)((char *)cmd + sizeof(struct rekernel_cmd));
+		muid = (uid_t)args->uid;
 #ifdef DEBUG
 		pr_info("Re-Kernel monitorNet uid=%d\n", muid);
 #endif
