@@ -13,18 +13,29 @@
 #define LINE_ERROR                      (-1)
 #define LINE_SUCCESS                    (0)
 
-/* command types from userspace */
-enum rekernel_cmd_type {
-	REKERNEL_CMD_REMOVE_PROC = 1,
-	REKERNEL_CMD_MONITOR_NET = 2,
-};
+#define REKERNEL_FAMILY_VERSION  1
+#define REKERNEL_FAMILY  "rekernel"
+#define GENL_ID_GENERATE    0
+#define NLA_DATA(na) ((char *)((char *)(na) + NLA_HDRLEN))
+#define NLA_PAYLOAD(len) (len - NLA_HDRLEN)
 
-struct rekernel_cmd {
-	int type;
+/* attribute type */
+enum {
+    REKERNEL_ATTR_UNSPEC = 0,
+    REKERNEL_ATTR_UID,
+    REKERNEL_ATTR_MSG,
+    __REKERNEL_ATTR_MAX,
 };
+#define REKERNEL_ATTR_MAX (__REKERNEL_ATTR_MAX - 1)
 
-struct rekernel_monitor_net_args {
-	int uid;
+/* cmd type */
+enum {
+    REKERNEL_CMD_UNSPEC = 0,
+    REKERNEL_CMD_ADD_MONITOR,
+    REKERNEL_CMD_DEL_MONITOR,
+    REKERNEL_CMD_SEND_MSG,
+    __REKERNEL_CMD_MAX,
 };
+#define REKERNEL_CMD_MAX (__REKERNEL_CMD_MAX - 1)
 
 #endif
