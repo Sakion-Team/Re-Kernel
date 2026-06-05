@@ -4,7 +4,7 @@
  * File name: rekernel.c
  * Description: rekernel module
  * Author: nep_timeline@outlook.com
- * Last Modification:  2026/05/30
+ * Last Modification:  2026/06/06
  */
 #include "linux/printk.h"
 #include <linux/module.h>
@@ -16,7 +16,6 @@
 #include <linux/freezer.h>
 #include <linux/ktime.h>
 #include <linux/hrtimer.h>
-#include <linux/proc_fs.h>
 #include "rekernel.h"
 #include <trace/hooks/binder.h>
 #include <trace/hooks/signal.h>
@@ -26,11 +25,13 @@
 #include <linux/types.h>
 #include <net/sock.h>
 #include <linux/netlink.h>
+#include <linux/genetlink.h>
 #include <linux/version.h>
 #include <linux/netfilter.h>
 #include <linux/netfilter_ipv4.h>
 #include <linux/netfilter_ipv6.h>
 #include <net/rtnetlink.h>
+#include <net/genetlink.h>
 #include <net/sock.h>
 #include <net/ip.h>
 #include <net/ipv6.h>
@@ -43,20 +44,58 @@
 
 #include <linux/kprobes.h>
 
-#define NETLINK_REKERNEL_MAX     		26
-#define NETLINK_REKERNEL_MIN     		22
-#define USER_PORT        				100
 #define PACKET_SIZE 					256
 
-struct sock *netlink_socket = NULL;
-extern struct net init_net;
-int netlink_unit = NETLINK_REKERNEL_MIN;
+static int handle_add_monitor(struct sk_buff *skb, struct genl_info *info);
+static int handle_del_monitor(struct sk_buff *skb, struct genl_info *info);
+static int handle_send_msg(struct sk_buff *skb, struct genl_info *info);
+
+static struct nla_policy rekernel_policy[REKERNEL_ATTR_MAX + 1] = {
+    [REKERNEL_ATTR_UID] = { .type = NLA_U32 },
+    [REKERNEL_ATTR_MSG] = { .type = NLA_NUL_STRING },
+};
+
+static const struct genl_ops rekernel_ops[] = {
+        {
+                .cmd = REKERNEL_CMD_ADD_MONITOR,
+                .flags = 0,
+				.policy = rekernel_policy,
+                .doit = handle_add_monitor,
+                .dumpit = NULL,
+        },
+        {
+                .cmd = REKERNEL_CMD_DEL_MONITOR,
+                .flags = 0,
+				.policy = rekernel_policy,
+                .doit = handle_del_monitor,
+                .dumpit = NULL,
+        },
+        {
+                .cmd = REKERNEL_CMD_SEND_MSG,
+                .flags = 0,
+				.policy = rekernel_policy,
+                .doit = handle_send_msg,
+                .dumpit = NULL,
+        }
+};
+
+static struct genl_family rekernel_family = {
+        .id = GENL_ID_GENERATE,
+        .hdrsize = 0,
+        .name = REKERNEL_FAMILY,
+        .version = REKERNEL_FAMILY_VERSION,
+        .maxattr = REKERNEL_ATTR_MAX,
+        .ops = rekernel_ops,
+        .n_ops = ARRAY_SIZE(rekernel_ops),
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0))
+        .resv_start_op = REKERNEL_CMD_SEND_MSG + 1,
+#endif
+};
 
 static unsigned long (*re_kallsyms_lookup_name)(const char* name);
 static void (*re_binder_transaction_buffer_release)(struct binder_proc* proc, struct binder_thread* thread, struct binder_buffer* buffer, binder_size_t off_end_offset, bool is_failure);
 static void (*re_binder_alloc_free_buf)(struct binder_alloc* alloc, struct binder_buffer* buffer);
 static struct binder_stats(*re_binder_stats);
-static struct proc_dir_entry *rekernel_dir, *rekernel_unit_entry;
 
 /* hashmap for net monitor uids */
 #define REKERNEL_NET_UID_HASH_BITS 6
@@ -109,26 +148,38 @@ static inline bool line_is_frozen(struct task_struct *task)
 	return rekernel_is_frozen_state_compatible(task->group_leader) || freezing(task->group_leader);
 }
 
-static int sendMessage(char *packet_buffer, uint16_t len)
-{
-    struct sk_buff *socket_buffer;
-    struct nlmsghdr *netlink_hdr;
+static int sendMessage(const char *msg, int len) {
+    struct sk_buff *skb;
+    void *hdr;
+    int ret;
 
-    socket_buffer = nlmsg_new(len, GFP_ATOMIC);
-    if (!socket_buffer) {
-        pr_err("netlink alloc failure!\n");
-        return LINE_ERROR;
+    skb = genlmsg_new(NLMSG_GOODSIZE, GFP_KERNEL);
+    if (!skb) {
+		pr_err("netlink alloc failure!\n");
+        return -ENOMEM;
+	}
+
+    hdr = genlmsg_put(skb, 0, 0, &rekernel_family, 0, REKERNEL_CMD_SEND_MSG);
+    if (!hdr) {
+		pr_err("genlmsg_put failaure!\n");
+        kfree_skb(skb);
+        return -ENOMEM;
     }
 
-    netlink_hdr = nlmsg_put(socket_buffer, 0, 0, netlink_unit, len, 0);
-    if (netlink_hdr == NULL) {
-        pr_err("nlmsg_put failaure!\n");
-        nlmsg_free(socket_buffer);
-        return LINE_ERROR;
+    ret = nla_put(skb, REKERNEL_ATTR_MSG, len, msg);
+    if (ret) {
+		pr_err("nla_put_string failaure!\n");
+        kfree_skb(skb);
+        return ret;
     }
 
-    memcpy(nlmsg_data(netlink_hdr), packet_buffer, len);
-    return netlink_unicast(netlink_socket, socket_buffer, USER_PORT, MSG_DONTWAIT);
+    genlmsg_end(skb, hdr);
+
+    ret = genlmsg_multicast(&rekernel_family, skb, 0, 0, GFP_KERNEL);
+    if (ret < LINE_SUCCESS)
+        pr_err("genlmsg_multicast failaure! %d\n", ret);
+
+    return ret;
 }
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0))
@@ -158,11 +209,9 @@ void line_binder_alloc_new_buf_locked(void *data, size_t size, struct binder_all
 #ifdef DEBUG
 			pr_info("[Re-Kernel LKM] Binder Free buffer full! from=%d | target=%d\n", task_uid(current).val, task_uid(p).val);
 #endif
-			if (netlink_socket != NULL) {
-				char binder_kmsg[PACKET_SIZE];
-				int len = scnprintf(binder_kmsg, sizeof(binder_kmsg), "type=Binder,bindertype=free_buffer_full,oneway=1,from_pid=%d,from=%d,target_pid=%d,target=%d,rpc_name=%s,code=%d;", task_tgid_nr(current), task_uid(current).val, task_tgid_nr(p), task_uid(p).val, "FREE_BUFFER_FULL", -1);
-				sendMessage(binder_kmsg, len);
-			}
+			char binder_kmsg[PACKET_SIZE];
+			int len = scnprintf(binder_kmsg, sizeof(binder_kmsg), "type=Binder,bindertype=free_buffer_full,oneway=1,from_pid=%d,from=%d,target_pid=%d,target=%d,rpc_name=%s,code=%d;", task_tgid_nr(current), task_uid(current).val, task_tgid_nr(p), task_uid(p).val, "FREE_BUFFER_FULL", -1);
+			sendMessage(binder_kmsg, len);
 		}
 	}
 }
@@ -197,11 +246,9 @@ void line_binder_reply(void *data, struct binder_proc *target_proc, struct binde
 #ifdef DEBUG
 		pr_info("[Re-Kernel LKM] Sync Binder Reply! from=%d | target=%d\n", task_uid(proc->tsk).val, task_uid(target_proc->tsk).val);
 #endif
-		if (netlink_socket != NULL) {
-			char binder_kmsg[PACKET_SIZE];
-			int len = scnprintf(binder_kmsg, sizeof(binder_kmsg), "type=Binder,bindertype=reply,oneway=0,from_pid=%d,from=%d,target_pid=%d,target=%d,rpc_name=%s,code=%d;", task_tgid_nr(proc->tsk), task_uid(proc->tsk).val, task_tgid_nr(target_proc->tsk), task_uid(target_proc->tsk).val, "SYNC_BINDER_REPLY", -1);
-			sendMessage(binder_kmsg, len);
-		}
+		char binder_kmsg[PACKET_SIZE];
+		int len = scnprintf(binder_kmsg, sizeof(binder_kmsg), "type=Binder,bindertype=reply,oneway=0,from_pid=%d,from=%d,target_pid=%d,target=%d,rpc_name=%s,code=%d;", task_tgid_nr(proc->tsk), task_uid(proc->tsk).val, task_tgid_nr(target_proc->tsk), task_uid(target_proc->tsk).val, "SYNC_BINDER_REPLY", -1);
+		sendMessage(binder_kmsg, len);
 	}
 }
 
@@ -248,11 +295,9 @@ void line_binder_transaction(void *data, struct binder_proc *target_proc, struct
 #ifdef DEBUG
 		pr_info("[Re-Kernel LKM] Sync Binder Transaction! from=%d | target=%d\n", task_uid(proc->tsk).val, task_uid(target_proc->tsk).val);
 #endif
-		if (netlink_socket != NULL) {
-			char binder_kmsg[PACKET_SIZE];
-			int len = scnprintf(binder_kmsg, sizeof(binder_kmsg), "type=Binder,bindertype=transaction,oneway=0,from_pid=%d,from=%d,target_pid=%d,target=%d,rpc_name=%s,code=%d;", task_tgid_nr(proc->tsk), task_uid(proc->tsk).val, task_tgid_nr(target_proc->tsk), task_uid(target_proc->tsk).val, "SYNC_BINDER", -1);
-			sendMessage(binder_kmsg, len);
-		}
+		char binder_kmsg[PACKET_SIZE];
+		int len = scnprintf(binder_kmsg, sizeof(binder_kmsg), "type=Binder,bindertype=transaction,oneway=0,from_pid=%d,from=%d,target_pid=%d,target=%d,rpc_name=%s,code=%d;", task_tgid_nr(proc->tsk), task_uid(proc->tsk).val, task_tgid_nr(target_proc->tsk), task_uid(target_proc->tsk).val, "SYNC_BINDER", -1);
+		sendMessage(binder_kmsg, len);
 	}
 
 	if ((tr->flags & TF_ONE_WAY) /* async binder */
@@ -277,11 +322,9 @@ void line_binder_transaction(void *data, struct binder_proc *target_proc, struct
 #ifdef DEBUG
 			pr_info("[Re-Kernel LKM] ASync Binder Transaction! from=%d | target=%d\n", task_uid(proc->tsk).val, task_uid(target_proc->tsk).val);
 #endif
-			if (netlink_socket != NULL) {
-				char binder_kmsg[PACKET_SIZE];
-				int len = scnprintf(binder_kmsg, sizeof(binder_kmsg), "type=Binder,bindertype=transaction,oneway=1,from_pid=%d,from=%d,target_pid=%d,target=%d,rpc_name=%s,code=%d;", task_tgid_nr(proc->tsk), task_uid(proc->tsk).val, task_tgid_nr(target_proc->tsk), task_uid(target_proc->tsk).val, buf, tr->code);
-				sendMessage(binder_kmsg, len);
-			}
+			char binder_kmsg[PACKET_SIZE];
+			int len = scnprintf(binder_kmsg, sizeof(binder_kmsg), "type=Binder,bindertype=transaction,oneway=1,from_pid=%d,from=%d,target_pid=%d,target=%d,rpc_name=%s,code=%d;", task_tgid_nr(proc->tsk), task_uid(proc->tsk).val, task_tgid_nr(target_proc->tsk), task_uid(target_proc->tsk).val, buf, tr->code);
+			sendMessage(binder_kmsg, len);
 		}
 	}
 }
@@ -416,11 +459,9 @@ void line_signal(void *data, int sig, struct task_struct *killer, struct task_st
 #ifdef DEBUG
 		pr_info("[Re-Kernel LKM] Process Signal! signal=%d\n", sig);
 #endif
-		if (netlink_socket != NULL) {
-			char binder_kmsg[PACKET_SIZE];
-			int len = scnprintf(binder_kmsg, sizeof(binder_kmsg), "type=Signal,signal=%d,killer_pid=%d,killer=%d,dst_pid=%d,dst=%d;", sig, task_tgid_nr(killer), task_uid(killer).val, task_tgid_nr(dst), task_uid(dst).val);
-			sendMessage(binder_kmsg, len);
-		}
+		char binder_kmsg[PACKET_SIZE];
+		int len = scnprintf(binder_kmsg, sizeof(binder_kmsg), "type=Signal,signal=%d,killer_pid=%d,killer=%d,dst_pid=%d,dst=%d;", sig, task_tgid_nr(killer), task_uid(killer).val, task_tgid_nr(dst), task_uid(dst).val);
+		sendMessage(binder_kmsg, len);
 	}
 }
 
@@ -566,7 +607,6 @@ static unsigned int rekernel_pkg_ipv4_ipv6_in(void *priv, struct sk_buff *socket
 #ifdef DEBUG
   pr_info("[Re-Kernel LKM] Receive net data! target=%d\n", uid);
 #endif
-  if (netlink_socket != NULL) {
    char binder_kmsg[PACKET_SIZE];
    int len;
    if (ip_hdr(socket_buffer)->version == 4) {
@@ -579,7 +619,6 @@ static unsigned int rekernel_pkg_ipv4_ipv6_in(void *priv, struct sk_buff *socket
     return NF_ACCEPT;
    }
    sendMessage(binder_kmsg, len);
-  }
 
   return NF_ACCEPT;
 }
@@ -652,88 +691,73 @@ int register_netfilter(void)
 	return LINE_SUCCESS;
 }
 
-static void netlink_rcv_msg(struct sk_buff *socket_buffer)
-{
-	struct nlmsghdr *nlhdr;
-	struct rekernel_cmd *cmd;
+static int handle_add_monitor(struct sk_buff *skb, struct genl_info *info) {
+    uid_t muid;
 
-	if (socket_buffer->len < nlmsg_total_size(sizeof(struct rekernel_cmd)))
-		return;
+    if (!info->attrs[REKERNEL_ATTR_UID])
+        return -EINVAL;
 
-	nlhdr = nlmsg_hdr(socket_buffer);
-	cmd = NLMSG_DATA(nlhdr);
+    muid = nla_get_u32(info->attrs[REKERNEL_ATTR_UID]);
 
 #ifdef DEBUG
-	pr_info("Re-Kernel_netlink recv cmd type=%d\n", cmd->type);
+	pr_info("Re-Kernel monitorNet uid=%d\n", muid);
+#endif
+	mutex_lock(&rekernel_net_uid_mutex);
+	if (!net_uid_monitored(muid)) {
+		struct uid_info *entry = kmalloc(sizeof(*entry), GFP_KERNEL);
+		if (entry) {
+			entry->uid = muid;
+			hash_add_rcu(rekernel_net_uid_map, &entry->hnode, muid);
+		}
+	}
+	mutex_unlock(&rekernel_net_uid_mutex);
+
+    return LINE_SUCCESS;
+}
+
+static int handle_del_monitor(struct sk_buff *skb, struct genl_info *info)
+{
+	uid_t muid;
+
+	if (!info->attrs[REKERNEL_ATTR_UID])
+    	return -EINVAL;
+
+	muid = nla_get_u32(info->attrs[REKERNEL_ATTR_UID]);
+
+#ifdef DEBUG
+	pr_info("Re-Kernel delMonitor uid=%d\n", muid);
 #endif
 
-	switch (cmd->type) {
-	case REKERNEL_CMD_REMOVE_PROC:
-		if (rekernel_unit_entry) {
-			proc_remove(rekernel_unit_entry);
-			rekernel_unit_entry = NULL;
-		}
-		if (rekernel_dir) {
-			proc_remove(rekernel_dir);
-			rekernel_dir = NULL;
-		}
-		break;
-	case REKERNEL_CMD_MONITOR_NET:
+	mutex_lock(&rekernel_net_uid_mutex);
+
 	{
-		struct rekernel_monitor_net_args *args;
-		uid_t muid;
+    	struct uid_info *entry;
 
-		if (nlmsg_len(nlhdr) < sizeof(struct rekernel_cmd) + sizeof(struct rekernel_monitor_net_args)) {
-#ifdef DEBUG
-			pr_warn("Re-Kernel monitorNet error: payload too small\n");
-#endif
-			break;
-		}
-		args = (struct rekernel_monitor_net_args *)((char *)cmd + sizeof(struct rekernel_cmd));
-		muid = (uid_t)args->uid;
-#ifdef DEBUG
-		pr_info("Re-Kernel monitorNet uid=%d\n", muid);
-#endif
-		mutex_lock(&rekernel_net_uid_mutex);
-		if (!net_uid_monitored(muid)) {
-			struct uid_info *entry = kmalloc(sizeof(*entry), GFP_KERNEL);
-			if (entry) {
-				entry->uid = muid;
-				hash_add_rcu(rekernel_net_uid_map, &entry->hnode, muid);
-			}
-		}
-		mutex_unlock(&rekernel_net_uid_mutex);
-		break;
+    	hash_for_each_possible_rcu(rekernel_net_uid_map, entry, hnode, muid) {
+        	if (entry->uid == muid) {
+            	hash_del_rcu(&entry->hnode);
+            	break;
+        	}
+    	}
 	}
-	default:
-#ifdef DEBUG
-		pr_warn("Re-Kernel unknown cmd type=%d\n", cmd->type);
-#endif
-		break;
-	}
+	mutex_unlock(&rekernel_net_uid_mutex);
+
+    return LINE_SUCCESS;
 }
 
-struct netlink_kernel_cfg cfg = { 
-	.input = netlink_rcv_msg, // set recv callback
-};  
-
-static int rekernel_unit_show(struct seq_file *m, void *v)
+static int handle_send_msg(struct sk_buff *skb, struct genl_info *info)
 {
-	seq_printf(m, "%d\n", netlink_unit);
-	return 0;
-}
+    const char *msg;
 
-static int rekernel_unit_open(struct inode *inode, struct file *file)
-{
-	return single_open(file, rekernel_unit_show, NULL);
-}
+    if (!info->attrs[REKERNEL_ATTR_MSG])
+        return -EINVAL;
 
-static const struct proc_ops rekernel_unit_fops = {
-	.proc_open   = rekernel_unit_open,
-	.proc_read   = seq_read,
-	.proc_lseek   = seq_lseek,
-	.proc_release   = single_release,
-};
+    msg = nla_data(info->attrs[REKERNEL_ATTR_MSG]);
+
+    pr_info("MSG from userspace: %s\n", msg);
+
+    return 0;
+}
 
 static struct kprobe kp_kallsyms_lookup_name = {
 	.symbol_name = "kallsyms_lookup_name"
@@ -779,37 +803,21 @@ void unregister_kp(void) {
 
 static int __init start_rekernel(void)
 {
+	int ret;
 	pr_info("Thank you for choosing Re:Kernel!\n");
 #ifdef DEBUG
 	pr_info("Debug mode is enabled!\n");
 #endif
-	pr_info("Re:Kernel v9.2 | DEVELOPER: Sakion Team | USER PORT: %d\n", USER_PORT);
+	pr_info("Re:Kernel v9.2 | DEVELOPER: Sakion Team | Family: %s\n", REKERNEL_FAMILY);
 	pr_info("Trying to create Re:Kernel Server......\n");
 
-	for (netlink_unit = NETLINK_REKERNEL_MIN; netlink_unit < NETLINK_REKERNEL_MAX; netlink_unit++) {
-		netlink_socket = (struct sock *)netlink_kernel_create(&init_net, netlink_unit, &cfg);
-		if (netlink_socket != NULL)
-			break;
-	}
-
-	if (netlink_socket == NULL) {
+    ret = genl_register_family(&rekernel_family);
+    if (ret != LINE_SUCCESS) {
         pr_err("Failed to create Re:Kernel server!\n");
         return LINE_ERROR;
     }
 
-    pr_info("Created Re:Kernel server! NETLINK UNIT: %d\n", netlink_unit);
-
-	rekernel_dir = proc_mkdir("rekernel", NULL);
-	if (!rekernel_dir)
-		pr_err("create /proc/rekernel failed!\n");
-	else {
-		char buff[32];
-		sprintf(buff, "%d", netlink_unit);
-		rekernel_unit_entry = proc_create(buff,
-			0644, rekernel_dir, &rekernel_unit_fops);
-		if (!rekernel_unit_entry)
-			pr_err("create rekernel unit failed!\n");
-	}
+	pr_info("Re:Kernel Genl family registered! ID=%d\n", rekernel_family.id);
 
 	pr_info("Re-Kernel start hooking!\n");
 
@@ -846,7 +854,7 @@ static void __exit exit_rekernel(void)
 	unregister_signal();
 	unregister_netfilter();
 	unregister_kp();
-	netlink_kernel_release(netlink_socket);
+ 	genl_unregister_family(&rekernel_family);
 }
 
 module_init(start_rekernel);
