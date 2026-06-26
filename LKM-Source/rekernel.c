@@ -946,7 +946,7 @@ static int __init start_rekernel(void)
 	pr_info("Debug mode is enabled!\n");
 #endif
 #ifdef LEGACY_NETLINK
-	pr_info("Re:Kernel v9.2 | DEVELOPER: Sakion Team | USER PORT: %d\n", USER_PORT);
+	pr_info("Re:Kernel v9.5 | DEVELOPER: Sakion Team | USER PORT: %d\n", USER_PORT);
 	pr_info("Trying to create Re:Kernel Server......\n");
 
 	for (netlink_unit = NETLINK_REKERNEL_MIN; netlink_unit < NETLINK_REKERNEL_MAX; netlink_unit++) {
@@ -962,7 +962,7 @@ static int __init start_rekernel(void)
 
 	pr_info("Created Re:Kernel server! NETLINK UNIT: %d\n", netlink_unit);
 #else
-	pr_info("Re:Kernel v9.2 | DEVELOPER: Sakion Team | GENL FAMILY: %s\n", REKERNEL_GENL_FAMILY_NAME);
+	pr_info("Re:Kernel v9.5 | DEVELOPER: Sakion Team | GENL FAMILY: %s\n", REKERNEL_GENL_FAMILY_NAME);
 	pr_info("Trying to register Re:Kernel Generic Netlink family......\n");
 
 	if (genl_register_family(&rekernel_genl_family) != 0) {
