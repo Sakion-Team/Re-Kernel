@@ -5,7 +5,6 @@ public class LegacyReKernel {
     private static final int NETLINK_UNIT_MAX = 26;
     private static final int SOCKET_RECV_BUFSIZE = 64 * 1024;
     private static final int DEFAULT_RECV_BUFSIZE = 8 * 1024;
-    private static final Handler rekernel = new Handler(new HandlerThread("Re-Kernel").getLooper());
     private static final ExecutorService executorService = Executors.newSingleThreadExecutor();
 
     private static Map<String, String> parseParams(String message) {
@@ -180,41 +179,8 @@ public class LegacyReKernel {
                         byteBuffer.limit(length);
                         byteBuffer.order(ByteOrder.nativeOrder());
                         String data = new String(byteBuffer.array(), byteBuffer.position(), byteBuffer.limit(), StandardCharsets.UTF_8);
-                        if (!data.isEmpty()) {
-                            Map<String, String> params = parseParams(data.substring(data.indexOf("type"), data.lastIndexOf(";")));
-                            rekernel.post(() -> {
-                                String type = params.get("type");
-                                if (type == null)
-                                    return;
-
-                                switch (type) {
-                                    case "Binder" -> {
-                                        String bindertype = params.get("bindertype");
-                                        int oneway = StringToInteger(params.get("oneway"));
-                                        int fromPid = StringToInteger(params.get("from_pid"));
-                                        int fromUid = StringToInteger(params.get("from"));
-                                        int targetPid = StringToInteger(params.get("target_pid"));
-                                        int targetUid = StringToInteger(params.get("target"));
-                                        String rpcName = params.get("rpc_name");
-                                        int code = StringToInteger(params.get("code"));
-                                        // 你的代码
-                                    }
-                                    case "Signal" -> {
-                                        int targetPid = StringToInteger(params.get("dst_pid"));
-                                        int targetUid = StringToInteger(params.get("dst"));
-                                        int killerPid = StringToInteger(params.get("killer_pid"));
-                                        int killerUid = StringToInteger(params.get("killer"));
-                                        int signal = StringToInteger(params.get("signal"));
-                                        // 你的代码
-                                    }
-                                    case "Network" -> {
-                                        int targetUid = StringToInteger(params.get("target"));
-                                        String proto = params.get("proto");
-                                        // 你的代码
-                                    }
-                                }
-                            });
-                        }
+                        if (!data.isEmpty())
+                            ReKernel.onEvent(data);
                     } catch (ErrnoException | StringIndexOutOfBoundsException | InterruptedIOException | NumberFormatException ignored) {
 
                     } catch (Exception e) {
