@@ -40,7 +40,6 @@ public class GenericReKernel {
     private static final short REKERNEL_A_MSG = 1;
     private static final short REKERNEL_A_UID = 2;
 
-    private static final Handler rekernel = new Handler(new HandlerThread("Re-Kernel").getLooper());
     private static final ExecutorService executorService = Executors.newSingleThreadExecutor();
 
     private static int align4(int n) {
@@ -316,7 +315,7 @@ public class GenericReKernel {
                         byteBuffer.order(ByteOrder.nativeOrder());
                         String data = extractEvent(byteBuffer, length);
                         if (data != null && !data.isEmpty())
-                            rekernel.post(() -> ReKernel.onEvent(data));
+                            ReKernel.onEvent(data);
                     } catch (ErrnoException | StringIndexOutOfBoundsException | InterruptedIOException | NumberFormatException ignored) {
 
                     } catch (Exception e) {
