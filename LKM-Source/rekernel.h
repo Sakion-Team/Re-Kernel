@@ -13,29 +13,52 @@
 #define LINE_ERROR                      (-1)
 #define LINE_SUCCESS                    (0)
 
-#define REKERNEL_FAMILY_VERSION  1
-#define REKERNEL_FAMILY  "rekernel"
-#define GENL_ID_GENERATE    0
-#define NLA_DATA(na) ((char *)((char *)(na) + NLA_HDRLEN))
-#define NLA_PAYLOAD(len) (len - NLA_HDRLEN)
-
-/* attribute type */
-enum {
-    REKERNEL_ATTR_UNSPEC = 0,
-    REKERNEL_ATTR_UID,
-    REKERNEL_ATTR_MSG,
-    __REKERNEL_ATTR_MAX,
+/*
+ * Legacy raw-netlink protocol (used only when LEGACY_NETLINK is defined).
+ * Command types from userspace.
+ */
+enum rekernel_cmd_type {
+	REKERNEL_CMD_REMOVE_PROC = 1,
+	REKERNEL_CMD_MONITOR_NET = 2,
+	REKERNEL_CMD_DEL_MONITOR_NET = 3,
 };
-#define REKERNEL_ATTR_MAX (__REKERNEL_ATTR_MAX - 1)
 
-/* cmd type */
-enum {
-    REKERNEL_CMD_UNSPEC = 0,
-    REKERNEL_CMD_ADD_MONITOR,
-    REKERNEL_CMD_DEL_MONITOR,
-    REKERNEL_CMD_SEND_MSG,
-    __REKERNEL_CMD_MAX,
+struct rekernel_cmd {
+	int type;
 };
-#define REKERNEL_CMD_MAX (__REKERNEL_CMD_MAX - 1)
+
+struct rekernel_monitor_net_args {
+	int uid;
+};
+
+/*
+ * Generic Netlink protocol (used when LEGACY_NETLINK is NOT defined).
+ * This is the ABI contract with the userspace daemon: the daemon resolves
+ * the family by name via CTRL_CMD_GETFAMILY, joins the multicast group to
+ * receive events, and sends MONITOR_NET / DEL_MONITOR_NET commands.
+ * There is no REMOVE_PROC command: genl does not create /proc/rekernel.
+ */
+#define REKERNEL_GENL_FAMILY_NAME       "rekernel"
+#define REKERNEL_GENL_VERSION           1
+#define REKERNEL_GENL_MCGRP_NAME        "events"
+
+/* generic netlink commands */
+enum rekernel_genl_cmd {
+	REKERNEL_C_UNSPEC,
+	REKERNEL_C_EVENT,            /* kernel -> user, multicast event (REKERNEL_A_MSG) */
+	REKERNEL_C_MONITOR_NET,      /* user -> kernel, add uid (carries REKERNEL_A_UID) */
+	REKERNEL_C_DEL_MONITOR_NET,  /* user -> kernel, remove uid (carries REKERNEL_A_UID) */
+	__REKERNEL_C_MAX,
+};
+#define REKERNEL_C_MAX (__REKERNEL_C_MAX - 1)
+
+/* generic netlink attributes */
+enum rekernel_genl_attr {
+	REKERNEL_A_UNSPEC,
+	REKERNEL_A_MSG,   /* string: event payload in the legacy "key=value,...;" format */
+	REKERNEL_A_UID,   /* u32: uid to monitor for MONITOR_NET */
+	__REKERNEL_A_MAX,
+};
+#define REKERNEL_A_MAX (__REKERNEL_A_MAX - 1)
 
 #endif
