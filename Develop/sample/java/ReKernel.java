@@ -1,4 +1,6 @@
 public class ReKernel {
+    private static final Handler rekernel = new Handler(new HandlerThread("Re-Kernel").getLooper());
+    
     public static boolean isRunning() {
         return GenericReKernel.isRunning() || LegacyReKernel.isRunning();
     }
@@ -16,41 +18,43 @@ public class ReKernel {
     }
 
     public static void onEvent(String data) {
-        int typeIdx = data.indexOf("type");
-        int semiIdx = data.lastIndexOf(";");
-        if (typeIdx < 0 || semiIdx < typeIdx)
-            continue;
-        Map<String, String> params = parseParams(data.substring(typeIdx, semiIdx));
-        String type = params.get("type");
-        if (type == null)
-            return;
+        rekernel.post(() -> {
+            int typeIdx = data.indexOf("type");
+            int semiIdx = data.lastIndexOf(";");
+            if (typeIdx < 0 || semiIdx < typeIdx)
+                continue;
+            Map<String, String> params = parseParams(data.substring(typeIdx, semiIdx));
+            String type = params.get("type");
+            if (type == null)
+                return;
 
-        switch (type) {
-            case "Binder" -> {
-                String bindertype = params.get("bindertype");
-                int oneway = StringToInteger(params.get("oneway"));
-                int fromPid = StringToInteger(params.get("from_pid"));
-                int fromUid = StringToInteger(params.get("from"));
-                int targetPid = StringToInteger(params.get("target_pid"));
-                int targetUid = StringToInteger(params.get("target"));
-                String rpcName = params.get("rpc_name");
-                int code = StringToInteger(params.get("code"));
-                // 你的代码
-             }
-             case "Signal" -> {
-                 int targetPid = StringToInteger(params.get("dst_pid"));
-                 int targetUid = StringToInteger(params.get("dst"));
-                 int killerPid = StringToInteger(params.get("killer_pid"));
-                 int killerUid = StringToInteger(params.get("killer"));
-                 int signal = StringToInteger(params.get("signal"));
-                 // 你的代码
-             }
-             case "Network" -> {
-                 int targetUid = StringToInteger(params.get("target"));
-                 String proto = params.get("proto");
-                 // 你的代码
-             }
-         }
+            switch (type) {
+                case "Binder" -> {
+                    String bindertype = params.get("bindertype");
+                    int oneway = StringToInteger(params.get("oneway"));
+                    int fromPid = StringToInteger(params.get("from_pid"));
+                    int fromUid = StringToInteger(params.get("from"));
+                    int targetPid = StringToInteger(params.get("target_pid"));
+                    int targetUid = StringToInteger(params.get("target"));
+                    String rpcName = params.get("rpc_name");
+                    int code = StringToInteger(params.get("code"));
+                    // 你的代码
+                }
+                case "Signal" -> {
+                    int targetPid = StringToInteger(params.get("dst_pid"));
+                    int targetUid = StringToInteger(params.get("dst"));
+                    int killerPid = StringToInteger(params.get("killer_pid"));
+                    int killerUid = StringToInteger(params.get("killer"));
+                    int signal = StringToInteger(params.get("signal"));
+                    // 你的代码
+                }
+                case "Network" -> {
+                    int targetUid = StringToInteger(params.get("target"));
+                    String proto = params.get("proto");
+                    // 你的代码
+                }
+            }
+        });
     }
 
     private static Map<String, String> parseParams(String message) {
