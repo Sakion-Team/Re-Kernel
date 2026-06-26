@@ -1,5 +1,6 @@
 public class ReKernel {
-    private static boolean isRunning = false;
+    private static FileDescriptor fileDescriptor = null;
+    private static boolean defaultUnit = false;
     private static final int NETLINK_UNIT_DEFAULT = 22;
     private static final int NETLINK_UNIT_MAX = 26;
     private static final int SOCKET_RECV_BUFSIZE = 64 * 1024;
@@ -36,17 +37,54 @@ public class ReKernel {
         }
     }
 
+    public static boolean isRunning() {
+        return fileDescriptor != null && fileDescriptor.valid();
+    }
+
+    public static boolean monitorNet(int uid) {
+        if (!isRunning() || defaultUnit)
+            return false;
+
+        try {
+            byte[] payload = new byte[8];
+            ByteBuffer cmdBuf = ByteBuffer.wrap(payload);
+            cmdBuf.order(ByteOrder.nativeOrder());
+            cmdBuf.putInt(2);
+            cmdBuf.putInt(uid);
+
+            byte[] bytes = new byte[16 + payload.length];
+            ByteBuffer byteBuffer = ByteBuffer.wrap(bytes);
+            byteBuffer.order(ByteOrder.nativeOrder());
+
+            byteBuffer.putInt(bytes.length);
+            byteBuffer.putShort((short) 0x11);
+            byteBuffer.putShort((short) 0x1);
+            byteBuffer.putInt(1);
+            byteBuffer.putInt(100);
+            byteBuffer.put(payload);
+
+            try {
+                Os.write(fileDescriptor, bytes, 0, bytes.length);
+                return true;
+            } catch (ErrnoException _) {
+            }
+        } catch (Throwable _) {
+        }
+
+        return false;
+    }
+
     public static void start(ClassLoader classLoader) {
-        if (isRunning)
+        if (isRunning() || Build.VERSION.SDK_INT < Build.VERSION_CODES.Q)
             return;
 
         executorService.execute(() -> {
             try {
                 int netlinkUnit;
                 int configNetlinkUnit = Settings.netlinkUnit;
-                if (configNetlinkUnit >= NETLINK_UNIT_DEFAULT && configNetlinkUnit <= NETLINK_UNIT_MAX) {
+                if (configNetlinkUnit >= NETLINK_UNIT_DEFAULT && configNetlinkUnit <= NETLINK_UNIT_MAX && !Settings.searchNetlinkUnit) {
                     netlinkUnit = configNetlinkUnit;
-                } else {
+                } else if (Settings.searchNetlinkUnit) {
                     File dir = new File("/proc/rekernel");
                     if (dir.exists()) {
                         File[] files = dir.listFiles();
@@ -55,8 +93,15 @@ public class ReKernel {
                             return;
                         }
                         File unitFile = files[0];
-                        netlinkUnit = StringToInteger(unitFile.getName());
-                    } else netlinkUnit = NETLINK_UNIT_DEFAULT;
+                        Settings.netlinkUnit = netlinkUnit = StringUtils.StringToInteger(unitFile.getName());
+                        Settings.save();
+                    } else {
+                        defaultUnit = true;
+                        netlinkUnit = NETLINK_UNIT_DEFAULT;
+                    }
+                } else {
+                    defaultUnit = true;
+                    netlinkUnit = NETLINK_UNIT_DEFAULT;
                 }
 
                 FileDescriptor descriptor = Os.socket(OsConstants.AF_NETLINK, OsConstants.SOCK_DGRAM, netlinkUnit);
@@ -73,30 +118,56 @@ public class ReKernel {
 
                 Os.bind(descriptor, (SocketAddress) CakeReflection.newInstance(CakeReflection.findClass("android.system.NetlinkSocketAddress", classLoader), 100, 0));
 
-                isRunning = true;
+                fileDescriptor = descriptor;
 
                 // 连接成功
+                if (!defaultUnit) {
+                    try {
+                        byte[] message = "#proc_remove\u0000".getBytes(StandardCharsets.UTF_8);
+                        byte[] bytes = new byte[16 + message.length];
+                        ByteBuffer byteBuffer = ByteBuffer.wrap(bytes);
+                        byteBuffer.order(ByteOrder.nativeOrder());
 
-                try {
-                    byte[] message = "#proc_remove\u0000".getBytes(StandardCharsets.UTF_8);
-                    byte[] bytes = new byte[16 + message.length];
-                    ByteBuffer byteBuffer = ByteBuffer.wrap(bytes);
-                    byteBuffer.order(ByteOrder.nativeOrder());
+                        byteBuffer.putInt(bytes.length);
+                        byteBuffer.putShort((short) 0x11);
+                        byteBuffer.putShort((short) 0x1);
+                        byteBuffer.putInt(1);
+                        byteBuffer.putInt(100);
 
-                    byteBuffer.putInt(bytes.length);
-                    byteBuffer.putShort((short) 0x11);
-                    byteBuffer.putShort((short) 0x1);
-                    byteBuffer.putInt(1);
-                    byteBuffer.putInt(100);
+                        byteBuffer.put(message);
 
-                    byteBuffer.put(message);
+                        try {
+                            Os.write(descriptor, bytes, 0, bytes.length);
+                        } catch (ErrnoException _) {
+                        }
+                    } catch (Throwable throwable) {
+                        // 销毁/proc/rekernel目录失败
+                    }
 
                     try {
-                        Os.write(descriptor, bytes, 0, bytes.length);
-                    } catch (ErrnoException _) {
+                        byte[] payload = new byte[4];
+                        ByteBuffer cmdBuf = ByteBuffer.wrap(payload);
+                        cmdBuf.order(ByteOrder.nativeOrder());
+                        cmdBuf.putInt(1);
+
+                        byte[] bytes = new byte[16 + payload.length];
+                        ByteBuffer byteBuffer = ByteBuffer.wrap(bytes);
+                        byteBuffer.order(ByteOrder.nativeOrder());
+
+                        byteBuffer.putInt(bytes.length);
+                        byteBuffer.putShort((short) 0x11);
+                        byteBuffer.putShort((short) 0x1);
+                        byteBuffer.putInt(1);
+                        byteBuffer.putInt(100);
+                        byteBuffer.put(payload);
+
+                        try {
+                            Os.write(descriptor, bytes, 0, bytes.length);
+                        } catch (ErrnoException _) {
+                        }
+                    } catch (Throwable throwable) {
+                        // 销毁/proc/rekernel目录失败
                     }
-                } catch (Throwable throwable) {
-                    // 销毁/proc/rekernel目录失败
                 }
 
                 while (true) {
@@ -144,7 +215,7 @@ public class ReKernel {
                                 }
                             });
                         }
-                    } catch (ErrnoException | InterruptedIOException | NumberFormatException ignored) {
+                    } catch (ErrnoException | StringIndexOutOfBoundsException | InterruptedIOException | NumberFormatException ignored) {
 
                     } catch (Exception e) {
                         // 出现异常
