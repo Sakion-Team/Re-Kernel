@@ -97,7 +97,7 @@ Start / stop receiving `network()` events for a given uid. Returns `true` on
 success. Network monitoring is opt-in per uid and is unavailable when running on
 the legacy default unit (`isDefaultUnit()` returns `true`).
 
-### `killNet(int pid)`
+### `destroySocket(int pid)`
 
 Tell the kernel to destroy every IPv4/IPv6 **TCP and UDP** socket owned by `pid`
 (QUIC runs over UDP, so it is torn down as well). Returns `true` if the command
