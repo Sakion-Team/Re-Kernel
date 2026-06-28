@@ -1,0 +1,151 @@
+name: Release Re:Kernel
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version (e.g. 1.0)'
+        required: true
+        type: string
+      versionCode:
+        description: 'Version code (e.g. 1)'
+        required: true
+        type: string
+      changelog:
+        description: 'Changelog'
+        required: true
+        type: string
+
+jobs:
+  build-lkm:
+    name: Build LKM
+    strategy:
+      matrix:
+        include:
+          - kmi: android12-5.10
+            ddk_release: '20260313'
+          - kmi: android13-5.10
+            ddk_release: '20260313'
+          - kmi: android13-5.15
+            ddk_release: '20260313'
+          - kmi: android14-5.15
+            ddk_release: '20260313'
+          - kmi: android14-6.1
+            ddk_release: '20250825'
+          - kmi: android14-6.1
+            ddk_release: '20260313'
+          - kmi: android15-6.6
+            ddk_release: '20260313'
+          - kmi: android16-6.12
+            ddk_release: '20251104'
+          - kmi: android16-6.12
+            ddk_release: '20260313'
+    uses: ./.github/workflows/ddk-lkm.yml
+    with:
+      kmi: ${{ matrix.kmi }}
+      ddk_release: ${{ matrix.ddk_release }}
+      version: ${{ inputs.version }}
+
+  package:
+    name: Package Magisk ZIP
+    needs: build-lkm
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v6
+
+      - name: Download all LKM artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: kmod-artifacts
+          pattern: rekernel-*.ko
+
+      - name: Prepare Magisk module
+        run: |
+          VERSION=${{ inputs.version }}
+          VERSION_CODE=${{ inputs.versionCode }}
+
+          # Copy template
+          cp -r template Re-Kernel
+
+          # Replace version placeholders in module.prop
+          sed -i "s/@VERSION@/${VERSION}/g" Re-Kernel/module.prop
+          sed -i "s/@VERSION_CODE@/${VERSION_CODE}/g" Re-Kernel/module.prop
+
+          # Collect all .ko files into kmod/
+          mkdir -p Re-Kernel/kmod
+          for dir in kmod-artifacts/rekernel-*.ko/; do
+            cp "$dir"/*.ko Re-Kernel/kmod/
+          done
+
+          echo "=== kmod contents ==="
+          ls -lh Re-Kernel/kmod/
+
+          # Pack ZIP
+          cd Re-Kernel
+          zip -r ../Re-Kernel-${VERSION}.zip .
+
+      - name: Upload ZIP artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rekernel-zip
+          path: Re-Kernel-${{ inputs.version }}.zip
+
+  release:
+    name: Create GitHub Release
+    needs: package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v6
+
+      - name: Download ZIP
+        uses: actions/download-artifact@v4
+        with:
+          name: rekernel-zip
+
+      - name: Push update.json to magisk branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=${{ inputs.version }}
+          VERSION_CODE=${{ inputs.versionCode }}
+          REPO=${{ github.repository }}
+
+          # Build files in a temp dir
+          TMPDIR=$(mktemp -d)
+          cat > "$TMPDIR/update.json" <<EOF
+          {
+            "version": "${VERSION}",
+            "versionCode": ${VERSION_CODE},
+            "zipUrl": "https://github.com/${REPO}/releases/download/${VERSION}/Re-Kernel-${VERSION}.zip",
+            "changelog": "https://raw.githubusercontent.com/${REPO}/magisk/update.md"
+          }
+          EOF
+          sed -i 's/^          //' "$TMPDIR/update.json"
+          echo '${{ inputs.changelog }}' > "$TMPDIR/update.md"
+
+          cat "$TMPDIR/update.json"
+          cat "$TMPDIR/update.md"
+
+          # Force-push to orphan magisk branch
+          cd "$TMPDIR"
+          git init
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "release: ${VERSION}"
+          git push --force "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git" HEAD:magisk
+
+      - name: Create Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=${{ inputs.version }}
+
+          gh release create "$VERSION" \
+            --title "Re:Kernel $VERSION" \
+            --notes "${{ inputs.changelog }}" \
+            Re-Kernel-${VERSION}.zip
