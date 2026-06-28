@@ -41,8 +41,10 @@ class GenericUtils {
     static final byte REKERNEL_C_EVENT = 1;             // kernel -> user
     static final byte REKERNEL_C_ADD_MONITOR_NET = 2;       // user -> kernel: add uid
     static final byte REKERNEL_C_DEL_MONITOR_NET = 3;   // user -> kernel: remove uid
+    static final byte REKERNEL_C_KILL_NET = 4;          // user -> kernel: kill a pid's TCP/UDP sockets
     static final short REKERNEL_A_MSG = 1;
     static final short REKERNEL_A_UID = 2;
+    static final short REKERNEL_A_PID = 3;
 
     static volatile int familyId = -1;       // genl family id ("rekernel")
     static volatile int mcastGroupId = -1;    // genl multicast group id ("events")

@@ -97,6 +97,16 @@ Start / stop receiving `network()` events for a given uid. Returns `true` on
 success. Network monitoring is opt-in per uid and is unavailable when running on
 the legacy default unit (`isDefaultUnit()` returns `true`).
 
+### `destroySocket(int pid)`
+
+Tell the kernel to destroy every IPv4/IPv6 **TCP and UDP** socket owned by `pid`
+(QUIC runs over UDP, so it is torn down as well). Returns `true` if the command
+was sent — not whether any socket actually matched. Like network monitoring, it
+is unavailable on the legacy default unit (`isDefaultUnit()` returns `true`).
+
+Use it to force a frozen/tombstoned app to drop its live connections, e.g. right
+before or after freezing it so it can't keep sockets alive in the background.
+
 ### State helpers
 
 | Method | Returns |

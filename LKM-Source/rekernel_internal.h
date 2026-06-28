@@ -66,6 +66,9 @@ void rekernel_netlink_stop(void);
 void net_uid_add(uid_t uid);
 void net_uid_del(uid_t uid);
 
+/* ---- per-pid socket teardown (rekernel_netkill.c) ---- */
+int rekernel_kill_net_connections(pid_t pid);
+
 /* ---- hook (un)registration ---- */
 int register_binder(void);
 void unregister_binder(void);
