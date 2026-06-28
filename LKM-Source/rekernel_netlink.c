@@ -97,7 +97,7 @@ static int rekernel_genl_get_version(struct sk_buff *skb, struct genl_info *info
 	struct sk_buff *reply;
 	void *msg_head;
 
-	reply = genlmsg_new(nla_total_size(sizeof(REKERNEL_VERSION)), GFP_KERNEL);
+	reply = genlmsg_new(nla_total_size(sizeof(REKERNEL_MAJOR_VERSION)), GFP_KERNEL);
 	if (!reply)
 		return -ENOMEM;
 
@@ -108,7 +108,7 @@ static int rekernel_genl_get_version(struct sk_buff *skb, struct genl_info *info
 		return -ENOMEM;
 	}
 
-	if (nla_put_string(reply, REKERNEL_A_MSG, REKERNEL_VERSION)) {
+	if (nla_put_string(reply, REKERNEL_A_MSG, REKERNEL_MAJOR_VERSION)) {
 		genlmsg_cancel(reply, msg_head);
 		nlmsg_free(reply);
 		return -EMSGSIZE;
@@ -318,7 +318,7 @@ static int rekernel_unit_open(struct inode *inode, struct file *file)
 
 static int rekernel_version_show(struct seq_file *m, void *v)
 {
-	seq_printf(m, "%s\n", REKERNEL_VERSION);
+	seq_printf(m, "%s\n", REKERNEL_MAJOR_VERSION);
 	return 0;
 }
 
@@ -345,7 +345,7 @@ static const struct proc_ops rekernel_version_fops = {
 int rekernel_netlink_start(void)
 {
 #ifdef LEGACY_NETLINK
-	pr_info("Re:Kernel v%s | DEVELOPER: Sakion Team | USER PORT: %d\n", REKERNEL_VERSION, USER_PORT);
+	pr_info("Re:Kernel v%s | DEVELOPER: Sakion Team | USER PORT: %d\n", REKERNEL_MAJOR_VERSION, USER_PORT);
 	pr_info("Trying to create Re:Kernel Server......\n");
 
 	for (netlink_unit = NETLINK_REKERNEL_MIN; netlink_unit < NETLINK_REKERNEL_MAX; netlink_unit++) {
@@ -380,7 +380,7 @@ int rekernel_netlink_start(void)
 		}
 	}
 #else
-	pr_info("Re:Kernel v%s | DEVELOPER: Sakion Team | GENL FAMILY: %s\n", REKERNEL_VERSION, REKERNEL_GENL_FAMILY_NAME);
+	pr_info("Re:Kernel v%s | DEVELOPER: Sakion Team | GENL FAMILY: %s\n", REKERNEL_MAJOR_VERSION, REKERNEL_GENL_FAMILY_NAME);
 	pr_info("Trying to register Re:Kernel Generic Netlink family......\n");
 
 	if (genl_register_family(&rekernel_genl_family) != 0) {
