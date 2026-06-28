@@ -418,6 +418,8 @@ public class ReKernel {
 
             cacheCallback = callback;
 
+            version = readVersion();
+
             executorService.execute(() -> {
                 while (true) {
                     try {
@@ -434,8 +436,6 @@ public class ReKernel {
                     }
                 }
             });
-
-            version = readVersion();
 
             return 0;
         } catch (Throwable ignored) {
