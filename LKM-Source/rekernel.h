@@ -46,7 +46,7 @@ struct rekernel_monitor_net_args {
 enum rekernel_genl_cmd {
 	REKERNEL_C_UNSPEC,
 	REKERNEL_C_EVENT,            /* kernel -> user, multicast event (REKERNEL_A_MSG) */
-	REKERNEL_C_MONITOR_NET,      /* user -> kernel, add uid (carries REKERNEL_A_UID) */
+	REKERNEL_C_ADD_MONITOR_NET,      /* user -> kernel, add uid (carries REKERNEL_A_UID) */
 	REKERNEL_C_DEL_MONITOR_NET,  /* user -> kernel, remove uid (carries REKERNEL_A_UID) */
 	__REKERNEL_C_MAX,
 };
