@@ -16,6 +16,7 @@ import static org.sakion.rekernel.GenericUtils.REKERNEL_C_GET_VERSION;
 import static org.sakion.rekernel.GenericUtils.REKERNEL_C_KILL_NET;
 import static org.sakion.rekernel.GenericUtils.SOCKET_RECV_BUFSIZE;
 import static org.sakion.rekernel.GenericUtils.SOL_NETLINK;
+import static org.sakion.rekernel.GenericUtils.StringToInteger;
 import static org.sakion.rekernel.GenericUtils.extractEvent;
 import static org.sakion.rekernel.GenericUtils.extractVersion;
 import static org.sakion.rekernel.GenericUtils.familyId;
@@ -149,6 +150,20 @@ public class ReKernel {
         return sendCommand(REKERNEL_C_DEL_MONITOR_NET, true, REKERNEL_A_UID, uid);
     }
 
+    public static int getMajorVersion() {
+        if (version == null)
+            return -1;
+
+        return StringToInteger(version.split("\\.")[0]);
+    }
+
+    public static int getMinorVersion() {
+        if (version == null)
+            return -1;
+
+        return StringToInteger(version.split("\\.")[1]);
+    }
+
     /**
      * Destroy all of {@code pid}'s IPv4/IPv6 TCP and UDP sockets (QUIC rides on
      * UDP, so it is torn down too). Returns {@code true} if the command was sent
@@ -156,7 +171,10 @@ public class ReKernel {
      * ({@link #isDefaultUnit()}).
      */
     public static boolean destroySocket(int pid) {
-        if (!isRunning())
+        if (!isRunning() || version == null)
+            return false;
+
+        if (getMajorVersion() < 9 || (getMajorVersion() == 9 && getMinorVersion() < 5))
             return false;
 
         if (legacy)
