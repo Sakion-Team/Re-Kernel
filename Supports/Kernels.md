@@ -1,17 +1,17 @@
 ## 由咲音团队编译的内核文件 | Kernel files compiled by Sakion Team
 | Device | Kernel android version | Kernel version | Re:Kernel version | Link | Source code | Binder | Signal |
 | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: |
-| GKI | BAKLAVA | 6.12.x | 8.6 | [Download](https://github.com/Sakion-Team/Re-Kernel/releases/tag/releases) | [Link](https://github.com/Sakion-Team/Re-Kernel/tree/main/LKM-Source) | ✔ | ✔ |
-| GKI | VANILLA_ICE_CREAM | 6.6.x | 8.6 | [Download](https://github.com/Sakion-Team/Re-Kernel/releases/tag/releases) | [Link](https://github.com/Sakion-Team/Re-Kernel/tree/main/LKM-Source) | ✔ | ✔ |
-| GKI | UPSIDE_DOWN_CAKE | 6.1.x | 8.6 | [Download](https://github.com/Sakion-Team/Re-Kernel/releases/tag/releases) | [Link](https://github.com/Sakion-Team/Re-Kernel/tree/main/LKM-Source) | ✔ | ✔ |
-| GKI | TIRAMISU | 5.15.x | 8.6 | [Download](https://github.com/Sakion-Team/Re-Kernel/releases/tag/releases) | [Link](https://github.com/Sakion-Team/Re-Kernel/tree/main/LKM-Source) | ✔ | ✔ |
-| GKI | Android S | 5.10.x | 8.6 | [Download](https://github.com/Sakion-Team/Re-Kernel/releases/tag/releases) | [Link](https://github.com/Sakion-Team/Re-Kernel/tree/main/LKM-Source) | ✔ | ✔ |
+| GKI | BAKLAVA | 6.12.x | 10.0 | [Download](https://github.com/Sakion-Team/Re-Kernel/releases/tag/releases) | [Link](https://github.com/Sakion-Team/Re-Kernel/tree/main/LKM-Source) | ✔ | ✔ |
+| GKI | VANILLA_ICE_CREAM | 6.6.x | 10.0 | [Download](https://github.com/Sakion-Team/Re-Kernel/releases/tag/releases) | [Link](https://github.com/Sakion-Team/Re-Kernel/tree/main/LKM-Source) | ✔ | ✔ |
+| GKI | UPSIDE_DOWN_CAKE | 6.1.x | 10.0 | [Download](https://github.com/Sakion-Team/Re-Kernel/releases/tag/releases) | [Link](https://github.com/Sakion-Team/Re-Kernel/tree/main/LKM-Source) | ✔ | ✔ |
+| GKI | TIRAMISU | 5.15.x | 10.0 | [Download](https://github.com/Sakion-Team/Re-Kernel/releases/tag/releases) | [Link](https://github.com/Sakion-Team/Re-Kernel/tree/main/LKM-Source) | ✔ | ✔ |
+| GKI | Android S | 5.10.x | 10.0 | [Download](https://github.com/Sakion-Team/Re-Kernel/releases/tag/releases) | [Link](https://github.com/Sakion-Team/Re-Kernel/tree/main/LKM-Source) | ✔ | ✔ |
 ## 由第三方开发者编译的内核文件 | Kernel files compiled by third-party developers
 ### 警告: 内核被收录并不代表内核源代码受到 Sakion Team 审查，出现任何问题由用户自行承担。
 ### WARNING: The inclusion of the kernel does not mean that the kernel source code has been reviewed by the Sakion Team, any issues arising shall be borne by the user.
 | Device | Kernel android version | Kernel version | Re:Kernel version | Link | Source code | Binder | Signal |
 | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: |
-| Kernel Patch | N/A | 4.4-6.1 | 7.5 | [Download](https://github.com/lzghzr/APatch_kpm/releases/download/2025120300/re_kernel_7.5.0_network.kpm) | [Link](https://github.com/lzghzr/APatch_kpm/tree/main/re_kernel) | ✔ | ✔ |
+| Kernel Patch | N/A | 4.4-6.1 | 9.2 | [Download](https://github.com/lzghzr/APatch_kpm/releases/download/2026060400/re_kernel_8.0.0_network.kpm) | [Link](https://github.com/lzghzr/APatch_kpm/tree/main/re_kernel) | ✔ | ✔ |
 
 ## 内核兼容性追踪 | Kernel compatibility tracking
 (✘) - 可能永远不会兼容 | Maybe never be compatible
