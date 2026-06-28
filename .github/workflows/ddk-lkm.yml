@@ -35,7 +35,7 @@ jobs:
           # Copy source files to binder directory
           cp ./LKM-Source/*.c ./LKM-Source/*.h /opt/ddk/src/$KMI/drivers/android/
           cat ./LKM-Source/Makefile >> /opt/ddk/src/$KMI/drivers/android/Makefile
-          
+
           # Build
           cd /opt/ddk/src/$KMI
           make -C /opt/ddk/kdir/$KMI \

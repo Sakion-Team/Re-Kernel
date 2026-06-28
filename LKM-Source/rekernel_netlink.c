@@ -74,9 +74,26 @@ static int rekernel_genl_del_monitor_net(struct sk_buff *skb, struct genl_info *
 	return 0;
 }
 
+/* user -> kernel: destroy all IPv4/IPv6 TCP & UDP (incl. QUIC) sockets of a pid. */
+static int rekernel_genl_kill_net(struct sk_buff *skb, struct genl_info *info)
+{
+	pid_t pid;
+
+	if (!info->attrs[REKERNEL_A_PID])
+		return -EINVAL;
+
+	pid = (pid_t)nla_get_u32(info->attrs[REKERNEL_A_PID]);
+#ifdef DEBUG
+	pr_info("Re-Kernel killNet pid=%d\n", pid);
+#endif
+	rekernel_kill_net_connections(pid);
+	return 0;
+}
+
 static const struct nla_policy rekernel_genl_policy[REKERNEL_A_MAX + 1] = {
 	[REKERNEL_A_MSG] = { .type = NLA_NUL_STRING, .len = PACKET_SIZE - 1 },
 	[REKERNEL_A_UID] = { .type = NLA_U32 },
+	[REKERNEL_A_PID] = { .type = NLA_U32 },
 };
 
 static const struct genl_ops rekernel_genl_ops[] = {
@@ -87,6 +104,10 @@ static const struct genl_ops rekernel_genl_ops[] = {
 	{
 		.cmd  = REKERNEL_C_DEL_MONITOR_NET,
 		.doit = rekernel_genl_del_monitor_net,
+	},
+	{
+		.cmd  = REKERNEL_C_KILL_NET,
+		.doit = rekernel_genl_kill_net,
 	},
 };
 
@@ -214,6 +235,25 @@ static void netlink_rcv_msg(struct sk_buff *socket_buffer)
 			net_uid_del(muid);
 		else
 			net_uid_add(muid);
+		break;
+	}
+	case REKERNEL_CMD_KILL_NET:
+	{
+		struct rekernel_kill_net_args *kargs;
+		pid_t kpid;
+
+		if (nlmsg_len(nlhdr) < sizeof(struct rekernel_cmd) + sizeof(struct rekernel_kill_net_args)) {
+#ifdef DEBUG
+			pr_warn("Re-Kernel killNet error: payload too small\n");
+#endif
+			break;
+		}
+		kargs = (struct rekernel_kill_net_args *)((char *)cmd + sizeof(struct rekernel_cmd));
+		kpid = (pid_t)kargs->pid;
+#ifdef DEBUG
+		pr_info("Re-Kernel killNet pid=%d\n", kpid);
+#endif
+		rekernel_kill_net_connections(kpid);
 		break;
 	}
 	default:

@@ -8,9 +8,11 @@ import static org.sakion.rekernel.GenericUtils.NETLINK_GENERIC;
 import static org.sakion.rekernel.GenericUtils.NLA_HDRLEN;
 import static org.sakion.rekernel.GenericUtils.NLMSG_HDRLEN;
 import static org.sakion.rekernel.GenericUtils.NLM_F_REQUEST;
+import static org.sakion.rekernel.GenericUtils.REKERNEL_A_PID;
 import static org.sakion.rekernel.GenericUtils.REKERNEL_A_UID;
 import static org.sakion.rekernel.GenericUtils.REKERNEL_C_ADD_MONITOR_NET;
 import static org.sakion.rekernel.GenericUtils.REKERNEL_C_DEL_MONITOR_NET;
+import static org.sakion.rekernel.GenericUtils.REKERNEL_C_KILL_NET;
 import static org.sakion.rekernel.GenericUtils.SOCKET_RECV_BUFSIZE;
 import static org.sakion.rekernel.GenericUtils.SOL_NETLINK;
 import static org.sakion.rekernel.GenericUtils.extractEvent;
@@ -76,18 +78,18 @@ public class ReKernel {
 
     private static final Handler HANDLER = new Handler(THREAD.getLooper());
 
-    private static boolean sendCommand(byte cmd, boolean hasUid, int uid) {
+    private static boolean sendCommand(byte cmd, boolean hasAttr, int attrType, int value) {
         if (!isRunning() || familyId < 0)
             return false;
 
         try {
-            int total = NLMSG_HDRLEN + GENL_HDRLEN + (hasUid ? (NLA_HDRLEN + 4) : 0);
+            int total = NLMSG_HDRLEN + GENL_HDRLEN + (hasAttr ? (NLA_HDRLEN + 4) : 0);
 
             ByteBuffer byteBuffer = NetlinkUtils.nlBuf(total);
             NetlinkUtils.putNlMsgHdr(byteBuffer, total, familyId, NLM_F_REQUEST, 1, 0);
             NetlinkUtils.putGenlHdr(byteBuffer, cmd, GENL_VERSION);
-            if (hasUid)
-                NetlinkUtils.putAttrU32(byteBuffer, REKERNEL_A_UID, uid);
+            if (hasAttr)
+                NetlinkUtils.putAttrU32(byteBuffer, attrType, value);
 
             try {
                 Os.write(fileDescriptor, byteBuffer.array(), 0, total);
@@ -100,7 +102,7 @@ public class ReKernel {
         return false;
     }
 
-    private static boolean monitorNet(int uid, boolean add) {
+    private static boolean sendLegacyCommand(int cmdType, int value) {
         if (!isRunning() || defaultUnit)
             return false;
 
@@ -108,8 +110,8 @@ public class ReKernel {
             int total = NLMSG_HDRLEN + 8;
             ByteBuffer byteBuffer = NetlinkUtils.nlBuf(total);
             NetlinkUtils.putNlMsgHdr(byteBuffer, total, LEGACY_MSG_TYPE, NLM_F_REQUEST, 1, USER_PORT);
-            byteBuffer.putInt(add ? 2 : 3); // raw legacy cmd type (MONITOR_NET=2, DEL_MONITOR_NET=3)
-            byteBuffer.putInt(uid);
+            byteBuffer.putInt(cmdType);
+            byteBuffer.putInt(value);
 
             try {
                 Os.write(fileDescriptor, byteBuffer.array(), 0, total);
@@ -127,9 +129,9 @@ public class ReKernel {
             return false;
 
         if (legacy)
-            return monitorNet(uid, true);
+            return sendLegacyCommand(2, uid); // REKERNEL_CMD_ADD_MONITOR_NET
 
-        return sendCommand(REKERNEL_C_ADD_MONITOR_NET, true, uid);
+        return sendCommand(REKERNEL_C_ADD_MONITOR_NET, true, REKERNEL_A_UID, uid);
     }
 
     public static boolean delMonitorNet(int uid) {
@@ -137,9 +139,25 @@ public class ReKernel {
             return false;
 
         if (legacy)
-            return monitorNet(uid, false);
+            return sendLegacyCommand(3, uid); // REKERNEL_CMD_DEL_MONITOR_NET
 
-        return sendCommand(REKERNEL_C_DEL_MONITOR_NET, true, uid);
+        return sendCommand(REKERNEL_C_DEL_MONITOR_NET, true, REKERNEL_A_UID, uid);
+    }
+
+    /**
+     * Destroy all of {@code pid}'s IPv4/IPv6 TCP and UDP sockets (QUIC rides on
+     * UDP, so it is torn down too). Returns {@code true} if the command was sent
+     * (not whether any socket matched). Unavailable on the legacy default unit
+     * ({@link #isDefaultUnit()}).
+     */
+    public static boolean destroySocket(int pid) {
+        if (!isRunning())
+            return false;
+
+        if (legacy)
+            return sendLegacyCommand(4, pid); // REKERNEL_CMD_KILL_NET
+
+        return sendCommand(REKERNEL_C_KILL_NET, true, REKERNEL_A_PID, pid);
     }
 
     private static int startLegacy(Callback callback, boolean searchNetlinkUnit, int chooseNetlinkUnit) {
