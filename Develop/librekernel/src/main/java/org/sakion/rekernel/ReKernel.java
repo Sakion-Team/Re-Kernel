@@ -32,11 +32,13 @@ import org.lsposed.hiddenapibypass.HiddenApiBypass;
 
 import java.io.File;
 import java.io.FileDescriptor;
+import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -45,8 +47,9 @@ import java.util.concurrent.Executors;
 public class ReKernel {
     private ReKernel() {}
 
-    private static volatile FileDescriptor fileDescriptor = null;
-    private static volatile Callback cacheCallback = null;
+    private static String version = null;
+    private static FileDescriptor fileDescriptor = null;
+    private static Callback cacheCallback = null;
 
     // --- Legacy ---
     private static boolean legacy = false;
@@ -169,7 +172,7 @@ public class ReKernel {
      * Returns the version string (e.g. {@code "9.5"}), or {@code null} on the legacy
      * module, an unsupported module, or any error.
      */
-    public static String getVersion() {
+    private static String readVersion() {
         FileDescriptor descriptor = null;
         try {
             descriptor = Os.socket(OsConstants.AF_NETLINK, OsConstants.SOCK_DGRAM, NETLINK_GENERIC);
@@ -198,6 +201,10 @@ public class ReKernel {
         }
     }
 
+    public static String getVersion() {
+        return version;
+    }
+
     private static int startLegacy(Callback callback, boolean searchNetlinkUnit, int chooseNetlinkUnit) {
         try {
             int netlinkUnit;
@@ -209,8 +216,16 @@ public class ReKernel {
                     File[] files = dir.listFiles();
                     if (files == null)
                         return -1;
-                    File unitFile = files[0];
-                    netlinkUnit = GenericUtils.StringToInteger(unitFile.getName());
+                    File file = files[0];
+                    if (files.length == 1)
+                        netlinkUnit = GenericUtils.StringToInteger(file.getName());
+                    else if (file.getName().equals("version")) {
+                        version = Files.readAllLines(file.toPath()).get(0);
+                        netlinkUnit = GenericUtils.StringToInteger(files[1].getName());
+                    } else {
+                        version = Files.readAllLines(files[1].toPath()).get(0);
+                        netlinkUnit = GenericUtils.StringToInteger(file.getName());
+                    }
                 } else {
                     defaultUnit = true;
                     netlinkUnit = NETLINK_UNIT_DEFAULT;
@@ -398,9 +413,17 @@ public class ReKernel {
                     }
                 }
             });
+
+            version = readVersion();
+
             return 0;
         } catch (Throwable ignored) {
-
+            if (fileDescriptor != null) {
+                try {
+                    GenericUtils.closeAndSignalBlockedThreads(fileDescriptor);
+                } catch (IOException _) {
+                }
+            }
         }
 
         return -1;

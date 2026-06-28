@@ -38,11 +38,11 @@ class GenericUtils {
     static final String GENL_FAMILY_NAME = "rekernel";
     static final String GENL_MCGRP_NAME = "events";
     static final byte GENL_VERSION = 1;
-    static final byte REKERNEL_C_EVENT = 1;             // kernel -> user
+    static final byte REKERNEL_C_EVENT = 1;                 // kernel -> user
     static final byte REKERNEL_C_ADD_MONITOR_NET = 2;       // user -> kernel: add uid
-    static final byte REKERNEL_C_DEL_MONITOR_NET = 3;   // user -> kernel: remove uid
-    static final byte REKERNEL_C_KILL_NET = 4;          // user -> kernel: kill a pid's TCP/UDP sockets
-    static final byte REKERNEL_C_GET_VERSION = 5;       // user -> kernel: query version (kernel replies unicast REKERNEL_A_MSG)
+    static final byte REKERNEL_C_DEL_MONITOR_NET = 3;       // user -> kernel: remove uid
+    static final byte REKERNEL_C_KILL_NET = 4;              // user -> kernel: kill a pid's TCP/UDP sockets
+    static final byte REKERNEL_C_GET_VERSION = 4;           // user -> kernel: query version (kernel replies unicast REKERNEL_A_MSG)
     static final short REKERNEL_A_MSG = 1;
     static final short REKERNEL_A_UID = 2;
     static final short REKERNEL_A_PID = 3;
