@@ -15,7 +15,22 @@
 #include <linux/slab.h>
 #include <linux/errno.h>
 #include <net/sock.h>
+#include <net/ipv6.h>
 #include "rekernel_internal.h"
+
+/* A connection is "local" if either endpoint sits on the loopback address. */
+static bool rekernel_sk_is_loopback(struct sock *sk)
+{
+	if (sk->sk_family == AF_INET)
+		return ipv4_is_loopback(sk->sk_rcv_saddr) ||
+		       ipv4_is_loopback(sk->sk_daddr);
+#if IS_ENABLED(CONFIG_IPV6)
+	if (sk->sk_family == AF_INET6)
+		return ipv6_addr_loopback(&sk->sk_v6_rcv_saddr) ||
+		       ipv6_addr_loopback(&sk->sk_v6_daddr);
+#endif
+	return false;
+}
 
 /*
  * ponytail: cap sockets-per-kill at 1024. A real app holds far fewer TCP/UDP
@@ -56,6 +71,12 @@ static int rekernel_collect_socket(const void *p, struct file *file, unsigned fd
 
 	if ((sk->sk_family == AF_INET || sk->sk_family == AF_INET6) &&
 	    (sk->sk_protocol == IPPROTO_TCP || sk->sk_protocol == IPPROTO_UDP)) {
+		if (sk->sk_protocol == IPPROTO_TCP) {
+			if (rekernel_sk_is_loopback(sk))
+				return 0; /* spare localhost connections */
+			if (sk->sk_uid.val == 2000)
+				return 0; /* spare AID_SHELL-owned sockets */
+		}
 		sock_hold(sk);
 		set->socks[set->count++] = sk;
 	}
