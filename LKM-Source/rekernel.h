@@ -1,6 +1,9 @@
 #ifndef REKERNEL_H
 #define REKERNEL_H
 
+/* Re:Kernel version, single source of truth (used in logs and the version query). */
+#define REKERNEL_VERSION                "9.5"
+
 #define CLEAN_UP_ASYNC_BINDER
 
 #define MIN_USERAPP_UID                 (10000)
@@ -54,6 +57,7 @@ enum rekernel_genl_cmd {
 	REKERNEL_C_ADD_MONITOR_NET,      /* user -> kernel, add uid (carries REKERNEL_A_UID) */
 	REKERNEL_C_DEL_MONITOR_NET,  /* user -> kernel, remove uid (carries REKERNEL_A_UID) */
 	REKERNEL_C_KILL_NET,         /* user -> kernel, kill a pid's TCP/UDP sockets (carries REKERNEL_A_PID) */
+	REKERNEL_C_GET_VERSION,      /* user -> kernel, query version; kernel replies unicast with REKERNEL_A_MSG */
 	__REKERNEL_C_MAX,
 };
 #define REKERNEL_C_MAX (__REKERNEL_C_MAX - 1)

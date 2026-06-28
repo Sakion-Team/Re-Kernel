@@ -42,6 +42,7 @@ class GenericUtils {
     static final byte REKERNEL_C_ADD_MONITOR_NET = 2;       // user -> kernel: add uid
     static final byte REKERNEL_C_DEL_MONITOR_NET = 3;   // user -> kernel: remove uid
     static final byte REKERNEL_C_KILL_NET = 4;          // user -> kernel: kill a pid's TCP/UDP sockets
+    static final byte REKERNEL_C_GET_VERSION = 5;       // user -> kernel: query version (kernel replies unicast REKERNEL_A_MSG)
     static final short REKERNEL_A_MSG = 1;
     static final short REKERNEL_A_UID = 2;
     static final short REKERNEL_A_PID = 3;
@@ -138,6 +139,15 @@ class GenericUtils {
     }
 
     static String extractEvent(ByteBuffer byteBuffer, int length) {
+        return extractMsg(byteBuffer, length, REKERNEL_C_EVENT);
+    }
+
+    static String extractVersion(ByteBuffer byteBuffer, int length) {
+        return extractMsg(byteBuffer, length, REKERNEL_C_GET_VERSION);
+    }
+
+    /** Read the REKERNEL_A_MSG string out of a genl message whose cmd matches {@code expectedCmd}. */
+    private static String extractMsg(ByteBuffer byteBuffer, int length, int expectedCmd) {
         if (length < NLMSG_HDRLEN + GENL_HDRLEN)
             return null;
 
@@ -147,7 +157,7 @@ class GenericUtils {
             return null;
 
         int genlCmd = byteBuffer.get(NLMSG_HDRLEN) & 0xFF;
-        if (genlCmd != REKERNEL_C_EVENT)
+        if (genlCmd != expectedCmd)
             return null;
 
         NetlinkUtils.AttrCursor attr = new NetlinkUtils.AttrCursor(

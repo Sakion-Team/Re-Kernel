@@ -107,6 +107,13 @@ is unavailable on the legacy default unit (`isDefaultUnit()` returns `true`).
 Use it to force a frozen/tombstoned app to drop its live connections, e.g. right
 before or after freezing it so it can't keep sockets alive in the background.
 
+### `getVersion()`
+
+Query the loaded module's version string (e.g. `"9.5"`). Sends a
+`GET_VERSION` command and waits for the kernel's reply on a private socket, so it
+does **blocking I/O — call it off the main thread**. Returns `null` on the legacy
+module, an older module without version support, or any error.
+
 ### State helpers
 
 | Method | Returns |

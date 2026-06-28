@@ -26,7 +26,7 @@ extern struct net init_net;
 static struct sock *netlink_socket = NULL;
 static int netlink_unit = NETLINK_REKERNEL_MIN;
 /* /proc/rekernel only exists for legacy netlink-unit discovery; genl resolves by family name. */
-static struct proc_dir_entry *rekernel_dir, *rekernel_unit_entry;
+static struct proc_dir_entry *rekernel_dir, *rekernel_unit_entry, *rekernel_version_entry;
 
 /* Raw-netlink transport is ready once the kernel socket exists. */
 bool rekernel_netlink_ready(void)
@@ -36,6 +36,7 @@ bool rekernel_netlink_ready(void)
 #else
 /* Generic-netlink transport. The family is defined below and registered at init. */
 static bool rekernel_genl_registered = false;
+static struct genl_family rekernel_genl_family;
 
 bool rekernel_netlink_ready(void)
 {
@@ -90,6 +91,33 @@ static int rekernel_genl_kill_net(struct sk_buff *skb, struct genl_info *info)
 	return 0;
 }
 
+/* user -> kernel: reply unicast with the module version string. */
+static int rekernel_genl_get_version(struct sk_buff *skb, struct genl_info *info)
+{
+	struct sk_buff *reply;
+	void *msg_head;
+
+	reply = genlmsg_new(nla_total_size(sizeof(REKERNEL_VERSION)), GFP_KERNEL);
+	if (!reply)
+		return -ENOMEM;
+
+	msg_head = genlmsg_put(reply, info->snd_portid, info->snd_seq,
+			       &rekernel_genl_family, 0, REKERNEL_C_GET_VERSION);
+	if (!msg_head) {
+		nlmsg_free(reply);
+		return -ENOMEM;
+	}
+
+	if (nla_put_string(reply, REKERNEL_A_MSG, REKERNEL_VERSION)) {
+		genlmsg_cancel(reply, msg_head);
+		nlmsg_free(reply);
+		return -EMSGSIZE;
+	}
+
+	genlmsg_end(reply, msg_head);
+	return genlmsg_reply(reply, info);
+}
+
 static const struct nla_policy rekernel_genl_policy[REKERNEL_A_MAX + 1] = {
 	[REKERNEL_A_MSG] = { .type = NLA_NUL_STRING, .len = PACKET_SIZE - 1 },
 	[REKERNEL_A_UID] = { .type = NLA_U32 },
@@ -108,6 +136,10 @@ static const struct genl_ops rekernel_genl_ops[] = {
 	{
 		.cmd  = REKERNEL_C_KILL_NET,
 		.doit = rekernel_genl_kill_net,
+	},
+	{
+		.cmd  = REKERNEL_C_GET_VERSION,
+		.doit = rekernel_genl_get_version,
 	},
 };
 
@@ -208,6 +240,10 @@ static void netlink_rcv_msg(struct sk_buff *socket_buffer)
 			proc_remove(rekernel_unit_entry);
 			rekernel_unit_entry = NULL;
 		}
+		if (rekernel_version_entry) {
+			proc_remove(rekernel_version_entry);
+			rekernel_version_entry = NULL;
+		}
 		if (rekernel_dir) {
 			proc_remove(rekernel_dir);
 			rekernel_dir = NULL;
@@ -291,7 +327,7 @@ static const struct proc_ops rekernel_unit_fops = {
 int rekernel_netlink_start(void)
 {
 #ifdef LEGACY_NETLINK
-	pr_info("Re:Kernel v9.5 | DEVELOPER: Sakion Team | USER PORT: %d\n", USER_PORT);
+	pr_info("Re:Kernel v%s | DEVELOPER: Sakion Team | USER PORT: %d\n", REKERNEL_VERSION, USER_PORT);
 	pr_info("Trying to create Re:Kernel Server......\n");
 
 	for (netlink_unit = NETLINK_REKERNEL_MIN; netlink_unit < NETLINK_REKERNEL_MAX; netlink_unit++) {
@@ -316,11 +352,17 @@ int rekernel_netlink_start(void)
 		sprintf(buff, "%d", netlink_unit);
 		rekernel_unit_entry = proc_create(buff,
 			0644, rekernel_dir, &rekernel_unit_fops);
-		if (!rekernel_unit_entry)
+		if (!rekernel_unit_entry) {
 			pr_err("create rekernel unit failed!\n");
+		} else {
+			char versionBuffer[32];
+			sprintf(versionBuffer, "%s", REKERNEL_VERSION);
+			rekernel_version_entry = proc_create(versionBuffer,
+				0644, rekernel_dir, &rekernel_unit_fops);
+		}
 	}
 #else
-	pr_info("Re:Kernel v9.5 | DEVELOPER: Sakion Team | GENL FAMILY: %s\n", REKERNEL_GENL_FAMILY_NAME);
+	pr_info("Re:Kernel v%s | DEVELOPER: Sakion Team | GENL FAMILY: %s\n", REKERNEL_VERSION, REKERNEL_GENL_FAMILY_NAME);
 	pr_info("Trying to register Re:Kernel Generic Netlink family......\n");
 
 	if (genl_register_family(&rekernel_genl_family) != 0) {

@@ -12,10 +12,12 @@ import static org.sakion.rekernel.GenericUtils.REKERNEL_A_PID;
 import static org.sakion.rekernel.GenericUtils.REKERNEL_A_UID;
 import static org.sakion.rekernel.GenericUtils.REKERNEL_C_ADD_MONITOR_NET;
 import static org.sakion.rekernel.GenericUtils.REKERNEL_C_DEL_MONITOR_NET;
+import static org.sakion.rekernel.GenericUtils.REKERNEL_C_GET_VERSION;
 import static org.sakion.rekernel.GenericUtils.REKERNEL_C_KILL_NET;
 import static org.sakion.rekernel.GenericUtils.SOCKET_RECV_BUFSIZE;
 import static org.sakion.rekernel.GenericUtils.SOL_NETLINK;
 import static org.sakion.rekernel.GenericUtils.extractEvent;
+import static org.sakion.rekernel.GenericUtils.extractVersion;
 import static org.sakion.rekernel.GenericUtils.familyId;
 import static org.sakion.rekernel.GenericUtils.mcastGroupId;
 import static org.sakion.rekernel.GenericUtils.resolveFamily;
@@ -158,6 +160,42 @@ public class ReKernel {
             return sendLegacyCommand(4, pid); // REKERNEL_CMD_KILL_NET
 
         return sendCommand(REKERNEL_C_KILL_NET, true, REKERNEL_A_PID, pid);
+    }
+
+    /**
+     * Query the loaded Re:Kernel module version. Sends REKERNEL_C_GET_VERSION and
+     * waits for the kernel's unicast reply on a private short-lived socket (so it
+     * does not race the listener thread). Blocking I/O — call off the main thread.
+     * Returns the version string (e.g. {@code "9.5"}), or {@code null} on the legacy
+     * module, an unsupported module, or any error.
+     */
+    public static String getVersion() {
+        FileDescriptor descriptor = null;
+        try {
+            descriptor = Os.socket(OsConstants.AF_NETLINK, OsConstants.SOCK_DGRAM, NETLINK_GENERIC);
+            Os.bind(descriptor, (SocketAddress) HiddenApiBypass.newInstance(Class.forName("android.system.NetlinkSocketAddress"), 0, 0));
+
+            if (familyId < 0 && !resolveFamily(descriptor))
+                return null;
+
+            int total = NLMSG_HDRLEN + GENL_HDRLEN;
+            ByteBuffer request = NetlinkUtils.nlBuf(total);
+            NetlinkUtils.putNlMsgHdr(request, total, familyId, NLM_F_REQUEST, 1, 0);
+            NetlinkUtils.putGenlHdr(request, REKERNEL_C_GET_VERSION, GENL_VERSION);
+            Os.write(descriptor, request.array(), 0, total);
+
+            ByteBuffer reply = ByteBuffer.allocate(DEFAULT_RECV_BUFSIZE);
+            int length = Os.read(descriptor, reply);
+            reply.order(ByteOrder.nativeOrder());
+            return extractVersion(reply, length);
+        } catch (Throwable _) {
+            return null;
+        } finally {
+            try {
+                GenericUtils.closeAndSignalBlockedThreads(descriptor);
+            } catch (Throwable _) {
+            }
+        }
     }
 
     private static int startLegacy(Callback callback, boolean searchNetlinkUnit, int chooseNetlinkUnit) {
