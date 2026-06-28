@@ -841,7 +841,7 @@ static void netlink_rcv_msg(struct sk_buff *socket_buffer)
 			rekernel_dir = NULL;
 		}
 		break;
-	case REKERNEL_CMD_MONITOR_NET:
+	case REKERNEL_CMD_ADD_MONITOR_NET:
 	case REKERNEL_CMD_DEL_MONITOR_NET:
 	{
 		struct rekernel_monitor_net_args *args;
