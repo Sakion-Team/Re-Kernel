@@ -137,6 +137,9 @@ static int rekernel_genl_add_monitor_net(struct sk_buff *skb, struct genl_info *
 {
 	uid_t muid;
 
+	if (!capable(CAP_NET_ADMIN))
+		return -EPERM;
+
 	if (!info->attrs[REKERNEL_A_UID])
 		return -EINVAL;
 
@@ -152,6 +155,9 @@ static int rekernel_genl_add_monitor_net(struct sk_buff *skb, struct genl_info *
 static int rekernel_genl_del_monitor_net(struct sk_buff *skb, struct genl_info *info)
 {
 	uid_t muid;
+
+	if (!capable(CAP_NET_ADMIN))
+		return -EPERM;
 
 	if (!info->attrs[REKERNEL_A_UID])
 		return -EINVAL;
