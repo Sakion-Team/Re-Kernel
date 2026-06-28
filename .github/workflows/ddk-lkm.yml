@@ -12,6 +12,11 @@ on:
         required: false
         default: '20260313'
         type: string
+      version:
+        description: 'Re:Kernel version'
+        required: false
+        default: 'snapshot'
+        type: string
 
 jobs:
   build-rekernel-ko:
@@ -31,8 +36,8 @@ jobs:
           KMI=${{ inputs.kmi }}
           
           echo "=== Building rekernel.ko for KMI: $KMI ==="
-          
-          # Copy source files to binder directory
+
+          # sources -> in-tree binder dir (skip Makefile/Kconfig/README)
           cp ./LKM-Source/*.c ./LKM-Source/*.h /opt/ddk/src/$KMI/drivers/android/
           cat ./LKM-Source/Makefile >> /opt/ddk/src/$KMI/drivers/android/Makefile
 
@@ -42,20 +47,17 @@ jobs:
             M=/opt/ddk/src/$KMI/drivers/android \
             CONFIG_REKERNEL=m \
             CC="clang" \
+            REKERNEL_VERSION="${{ inputs.version }}" \
             modules
-          
+
           echo "=== Build completed ==="
-          
-          # Create output directory and copy artifact
+
+          # Artifact
           mkdir -p /github/workspace/out
           OUTPUT_NAME="rekernel-${{ inputs.kmi }}-${{ inputs.ddk_release }}.ko"
           cp /opt/ddk/src/$KMI/drivers/android/rekernel.ko "/github/workspace/out/$OUTPUT_NAME"
-          
-          echo "Copied to: /github/workspace/out/$OUTPUT_NAME"
-          ls -la "/github/workspace/out/$OUTPUT_NAME"
-          echo "Size: $(du -h "/github/workspace/out/$OUTPUT_NAME" | cut -f1)"
           llvm-strip -d "/github/workspace/out/$OUTPUT_NAME"
-          echo "Size after stripping: $(du -h "/github/workspace/out/$OUTPUT_NAME" | cut -f1)"
+          ls -la "/github/workspace/out/$OUTPUT_NAME"
 
       - name: Upload rekernel.ko artifact
         uses: actions/upload-artifact@v7
