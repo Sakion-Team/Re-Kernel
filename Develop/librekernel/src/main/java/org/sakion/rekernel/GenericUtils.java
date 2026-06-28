@@ -1,6 +1,5 @@
 package org.sakion.rekernel;
 
-import android.os.Build;
 import android.system.ErrnoException;
 import android.system.Os;
 
@@ -10,91 +9,68 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 
-public class GenericUtils {
-    protected static final int SOCKET_RECV_BUFSIZE = 64 * 1024;
-    protected static final int DEFAULT_RECV_BUFSIZE = 8 * 1024;
+class GenericUtils {
+    private GenericUtils() {}
 
-    protected static final int NETLINK_GENERIC = 16;
-    protected static final int SOL_NETLINK = 270;
-    protected static final int NETLINK_ADD_MEMBERSHIP = 1;
-    protected static final int GENL_ID_CTRL = 16;       // == NLMSG_MIN_TYPE, the "nlctrl" family
-    protected static final int NLMSG_MIN_TYPE = 0x10;
-    protected static final short NLM_F_REQUEST = 0x01;
+    static final int SOCKET_RECV_BUFSIZE = 64 * 1024;
+    static final int DEFAULT_RECV_BUFSIZE = 8 * 1024;
 
-    protected static final int NLMSG_HDRLEN = 16;       // struct nlmsghdr
-    protected static final int GENL_HDRLEN = 4;         // struct genlmsghdr
-    protected static final int NLA_HDRLEN = 4;          // struct nlattr
-    protected static final int NLA_TYPE_MASK = 0x3FFF;  // strip NLA_F_NESTED / NLA_F_NET_BYTEORDER
+    static final int NETLINK_GENERIC = 16;
+    static final int SOL_NETLINK = 270;
+    static final int NETLINK_ADD_MEMBERSHIP = 1;
+    static final int GENL_ID_CTRL = 16;       // == NLMSG_MIN_TYPE, the "nlctrl" family
+    static final int NLMSG_MIN_TYPE = 0x10;
+    static final short NLM_F_REQUEST = 0x01;
 
-    protected static final byte CTRL_CMD_GETFAMILY = 3;
-    protected static final short CTRL_ATTR_FAMILY_ID = 1;
-    protected static final short CTRL_ATTR_FAMILY_NAME = 2;
-    protected static final short CTRL_ATTR_MCAST_GROUPS = 7;
-    protected static final short CTRL_ATTR_MCAST_GRP_NAME = 1;
-    protected static final short CTRL_ATTR_MCAST_GRP_ID = 2;
+    // Structural constants live in Netlink (the Android-free wire layer);
+    // re-exported here so existing `import static ...GenericUtils.*` keep working.
+    static final int NLMSG_HDRLEN = NetlinkUtils.NLMSG_HDRLEN;  // struct nlmsghdr
+    static final int GENL_HDRLEN = NetlinkUtils.GENL_HDRLEN;    // struct genlmsghdr
+    static final int NLA_HDRLEN = NetlinkUtils.NLA_HDRLEN;      // struct nlattr
 
-    protected static final String GENL_FAMILY_NAME = "rekernel";
-    protected static final String GENL_MCGRP_NAME = "events";
-    protected static final byte GENL_VERSION = 1;
-    protected static final byte REKERNEL_C_EVENT = 1;             // kernel -> user
-    protected static final byte REKERNEL_C_ADD_MONITOR_NET = 2;       // user -> kernel: add uid
-    protected static final byte REKERNEL_C_DEL_MONITOR_NET = 3;   // user -> kernel: remove uid
-    protected static final short REKERNEL_A_MSG = 1;
-    protected static final short REKERNEL_A_UID = 2;
+    static final byte CTRL_CMD_GETFAMILY = 3;
+    static final short CTRL_ATTR_FAMILY_ID = 1;
+    static final short CTRL_ATTR_FAMILY_NAME = 2;
+    static final short CTRL_ATTR_MCAST_GROUPS = 7;
+    static final short CTRL_ATTR_MCAST_GRP_NAME = 1;
+    static final short CTRL_ATTR_MCAST_GRP_ID = 2;
 
-    protected static volatile int familyId = -1;       // genl family id ("rekernel")
-    protected static volatile int mcastGroupId = -1;    // genl multicast group id ("events")
+    static final String GENL_FAMILY_NAME = "rekernel";
+    static final String GENL_MCGRP_NAME = "events";
+    static final byte GENL_VERSION = 1;
+    static final byte REKERNEL_C_EVENT = 1;             // kernel -> user
+    static final byte REKERNEL_C_ADD_MONITOR_NET = 2;       // user -> kernel: add uid
+    static final byte REKERNEL_C_DEL_MONITOR_NET = 3;   // user -> kernel: remove uid
+    static final short REKERNEL_A_MSG = 1;
+    static final short REKERNEL_A_UID = 2;
 
-    protected static int align4(int n) {
-        return (n + 3) & ~3;
-    }
+    static volatile int familyId = -1;       // genl family id ("rekernel")
+    static volatile int mcastGroupId = -1;    // genl multicast group id ("events")
 
-    protected static void closeAndSignalBlockedThreads(FileDescriptor fd) throws IOException {
+    static void closeAndSignalBlockedThreads(FileDescriptor fd) throws IOException {
         if (fd == null) {
             return;
         }
         try {
             Os.close(fd);
         } catch (ErrnoException errnoException) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                throw errnoException.rethrowAsIOException();
-            } else {
-                IOException exception = new IOException(errnoException.getMessage());
-                exception.initCause(errnoException);
-                throw exception;
-            }
+            IOException exception = new IOException(errnoException.getMessage());
+            exception.initCause(errnoException);
+            throw exception;
         }
     }
 
-    protected static boolean resolveFamily(FileDescriptor descriptor) {
+    static boolean resolveFamily(FileDescriptor descriptor) {
         try {
             byte[] name = (GENL_FAMILY_NAME + "\u0000").getBytes(StandardCharsets.UTF_8);
-            int attrLen = NLA_HDRLEN + name.length;             // nla_len (unpadded)
-            int total = NLMSG_HDRLEN + GENL_HDRLEN + align4(attrLen);
+            int total = NLMSG_HDRLEN + GENL_HDRLEN + NetlinkUtils.align4(NLA_HDRLEN + name.length);
 
-            byte[] bytes = new byte[total];
-            ByteBuffer byteBuffer = ByteBuffer.wrap(bytes);
-            byteBuffer.order(ByteOrder.nativeOrder());
+            ByteBuffer byteBuffer = NetlinkUtils.nlBuf(total);
+            NetlinkUtils.putNlMsgHdr(byteBuffer, total, GENL_ID_CTRL, NLM_F_REQUEST, 1, 0);
+            NetlinkUtils.putGenlHdr(byteBuffer, CTRL_CMD_GETFAMILY, 1);
+            NetlinkUtils.putAttrBytes(byteBuffer, CTRL_ATTR_FAMILY_NAME, name);
 
-            // struct nlmsghdr
-            byteBuffer.putInt(total);
-            byteBuffer.putShort((short) GENL_ID_CTRL);
-            byteBuffer.putShort(NLM_F_REQUEST);
-            byteBuffer.putInt(1);   // seq
-            byteBuffer.putInt(0);   // pid
-
-            // struct genlmsghdr
-            byteBuffer.put(CTRL_CMD_GETFAMILY);
-            byteBuffer.put((byte) 1);   // controller version
-            byteBuffer.putShort((short) 0);
-
-            // CTRL_ATTR_FAMILY_NAME
-            byteBuffer.putShort((short) attrLen);
-            byteBuffer.putShort(CTRL_ATTR_FAMILY_NAME);
-            byteBuffer.put(name);
-            // trailing alignment padding is already zero (fresh array)
-
-            Os.write(descriptor, bytes, 0, bytes.length);
+            Os.write(descriptor, byteBuffer.array(), 0, total);
 
             ByteBuffer reply = ByteBuffer.allocate(DEFAULT_RECV_BUFSIZE);
             int length = Os.read(descriptor, reply);
@@ -108,37 +84,25 @@ public class GenericUtils {
         }
     }
 
-    protected static boolean parseFamilyReply(ByteBuffer byteBuffer, int length) {
+    static boolean parseFamilyReply(ByteBuffer byteBuffer, int length) {
         if (length < NLMSG_HDRLEN + GENL_HDRLEN)
             return false;
 
         int nlmsgLen = byteBuffer.getInt(0);
         short nlmsgType = byteBuffer.getShort(4);
-        if (nlmsgType != GENL_ID_CTRL)      // NLMSG_ERROR / unexpected
+        if (nlmsgType != GENL_ID_CTRL)
             return false;
 
         int end = Math.min(nlmsgLen, length);
-        int pos = NLMSG_HDRLEN + GENL_HDRLEN;   // skip genlmsghdr
-
         int fId = -1;
         int grpId = -1;
 
-        while (pos + NLA_HDRLEN <= end) {
-            int nlaLen = byteBuffer.getShort(pos) & 0xFFFF;
-            int nlaType = byteBuffer.getShort(pos + 2) & NLA_TYPE_MASK;
-            if (nlaLen < NLA_HDRLEN)
-                break;
-
-            int dataPos = pos + NLA_HDRLEN;
-            int dataLen = nlaLen - NLA_HDRLEN;
-
-            if (nlaType == CTRL_ATTR_FAMILY_ID && dataLen >= 2) {
-                fId = byteBuffer.getShort(dataPos) & 0xFFFF;
-            } else if (nlaType == CTRL_ATTR_MCAST_GROUPS) {
-                grpId = parseMcastGroups(byteBuffer, dataPos, dataPos + dataLen);
-            }
-
-            pos += align4(nlaLen);
+        NetlinkUtils.AttrCursor attr = new NetlinkUtils.AttrCursor(byteBuffer, NLMSG_HDRLEN + GENL_HDRLEN, end);
+        while (attr.next()) {
+            if (attr.type == CTRL_ATTR_FAMILY_ID && attr.dataLen >= 2)
+                fId = byteBuffer.getShort(attr.dataPos) & 0xFFFF;
+            else if (attr.type == CTRL_ATTR_MCAST_GROUPS)
+                grpId = parseMcastGroups(byteBuffer, attr.dataPos, attr.dataPos + attr.dataLen);
         }
 
         if (fId < 0)
@@ -149,47 +113,29 @@ public class GenericUtils {
         return true;
     }
 
-    protected static int parseMcastGroups(ByteBuffer byteBuffer, int start, int end) {
-        int pos = start;
-        while (pos + NLA_HDRLEN <= end) {
-            int outerLen = byteBuffer.getShort(pos) & 0xFFFF;   // one group entry (nested)
-            if (outerLen < NLA_HDRLEN)
-                break;
-
-            int innerStart = pos + NLA_HDRLEN;
-            int innerEnd = Math.min(pos + outerLen, end);
-
+    static int parseMcastGroups(ByteBuffer byteBuffer, int start, int end) {
+        // Outer attrs are index-keyed group entries (type ignored); each nests name/id attrs.
+        NetlinkUtils.AttrCursor group = new NetlinkUtils.AttrCursor(byteBuffer, start, end);
+        while (group.next()) {
             String name = null;
             int id = -1;
 
-            int ip = innerStart;
-            while (ip + NLA_HDRLEN <= innerEnd) {
-                int aLen = byteBuffer.getShort(ip) & 0xFFFF;
-                int aType = byteBuffer.getShort(ip + 2) & NLA_TYPE_MASK;
-                if (aLen < NLA_HDRLEN)
-                    break;
-
-                int aData = ip + NLA_HDRLEN;
-                int aDataLen = aLen - NLA_HDRLEN;
-
-                if (aType == CTRL_ATTR_MCAST_GRP_NAME) {
-                    name = readString(byteBuffer, aData, aDataLen);
-                } else if (aType == CTRL_ATTR_MCAST_GRP_ID && aDataLen >= 4) {
-                    id = byteBuffer.getInt(aData);
-                }
-
-                ip += align4(aLen);
+            NetlinkUtils.AttrCursor attr = new NetlinkUtils.AttrCursor(
+                    byteBuffer, group.dataPos, Math.min(group.dataPos + group.dataLen, end));
+            while (attr.next()) {
+                if (attr.type == CTRL_ATTR_MCAST_GRP_NAME)
+                    name = NetlinkUtils.readString(byteBuffer, attr.dataPos, attr.dataLen);
+                else if (attr.type == CTRL_ATTR_MCAST_GRP_ID && attr.dataLen >= 4)
+                    id = byteBuffer.getInt(attr.dataPos);
             }
 
             if (GENL_MCGRP_NAME.equals(name))
                 return id;
-
-            pos += align4(outerLen);
         }
         return -1;
     }
 
-    protected static String extractEvent(ByteBuffer byteBuffer, int length) {
+    static String extractEvent(ByteBuffer byteBuffer, int length) {
         if (length < NLMSG_HDRLEN + GENL_HDRLEN)
             return null;
 
@@ -202,27 +148,16 @@ public class GenericUtils {
         if (genlCmd != REKERNEL_C_EVENT)
             return null;
 
-        int end = Math.min(nlmsgLen, length);
-        int pos = NLMSG_HDRLEN + GENL_HDRLEN;
-
-        while (pos + NLA_HDRLEN <= end) {
-            int nlaLen = byteBuffer.getShort(pos) & 0xFFFF;
-            int nlaType = byteBuffer.getShort(pos + 2) & NLA_TYPE_MASK;
-            if (nlaLen < NLA_HDRLEN)
-                break;
-
-            int dataPos = pos + NLA_HDRLEN;
-            int dataLen = nlaLen - NLA_HDRLEN;
-
-            if (nlaType == REKERNEL_A_MSG)
-                return readString(byteBuffer, dataPos, dataLen);
-
-            pos += align4(nlaLen);
+        NetlinkUtils.AttrCursor attr = new NetlinkUtils.AttrCursor(
+                byteBuffer, NLMSG_HDRLEN + GENL_HDRLEN, Math.min(nlmsgLen, length));
+        while (attr.next()) {
+            if (attr.type == REKERNEL_A_MSG)
+                return NetlinkUtils.readString(byteBuffer, attr.dataPos, attr.dataLen);
         }
         return null;
     }
 
-    protected static int StringToInteger(String str) {
+    static int StringToInteger(String str) {
         if (str == null || str.isEmpty())
             return -1;
 
@@ -241,13 +176,4 @@ public class GenericUtils {
         }
     }
 
-    protected static String readString(ByteBuffer byteBuffer, int dataPos, int dataLen) {
-        int strLen = dataLen;
-        while (strLen > 0 && byteBuffer.get(dataPos + strLen - 1) == 0)
-            strLen--;
-        byte[] out = new byte[strLen];
-        for (int i = 0; i < strLen; i++)
-            out[i] = byteBuffer.get(dataPos + i);
-        return new String(out, StandardCharsets.UTF_8);
-    }
 }

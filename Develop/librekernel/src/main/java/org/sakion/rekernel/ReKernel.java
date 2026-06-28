@@ -39,14 +39,19 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class ReKernel {
+    private ReKernel() {}
+
     private static volatile FileDescriptor fileDescriptor = null;
     private static volatile Callback cacheCallback = null;
 
-    // Legacy
+    // --- Legacy ---
     private static boolean legacy = false;
     private static boolean defaultUnit = false;
     private static final int NETLINK_UNIT_DEFAULT = 22;
     private static final int NETLINK_UNIT_MAX = 26;
+    private static final int USER_PORT = 100;          // legacy raw-netlink dest port (kernel USER_PORT)
+    private static final int LEGACY_MSG_TYPE = 0x11;   // legacy raw-netlink nlmsg type
+    // --------------
 
     public static boolean isRunning() {
         return fileDescriptor != null && fileDescriptor.valid();
@@ -76,34 +81,16 @@ public class ReKernel {
             return false;
 
         try {
-            int payloadLen = GENL_HDRLEN + (hasUid ? (NLA_HDRLEN + 4) : 0);
-            int total = NLMSG_HDRLEN + payloadLen;
+            int total = NLMSG_HDRLEN + GENL_HDRLEN + (hasUid ? (NLA_HDRLEN + 4) : 0);
 
-            byte[] bytes = new byte[total];
-            ByteBuffer byteBuffer = ByteBuffer.wrap(bytes);
-            byteBuffer.order(ByteOrder.nativeOrder());
-
-            // struct nlmsghdr
-            byteBuffer.putInt(total);
-            byteBuffer.putShort((short) familyId);
-            byteBuffer.putShort(NLM_F_REQUEST);
-            byteBuffer.putInt(1);   // seq
-            byteBuffer.putInt(0);   // pid (0 -> kernel assigns)
-
-            // struct genlmsghdr
-            byteBuffer.put(cmd);
-            byteBuffer.put(GENL_VERSION);
-            byteBuffer.putShort((short) 0);
-
-            // optional REKERNEL_A_UID attribute (NLA_U32)
-            if (hasUid) {
-                byteBuffer.putShort((short) (NLA_HDRLEN + 4)); // nla_len = 8
-                byteBuffer.putShort(REKERNEL_A_UID);
-                byteBuffer.putInt(uid);
-            }
+            ByteBuffer byteBuffer = NetlinkUtils.nlBuf(total);
+            NetlinkUtils.putNlMsgHdr(byteBuffer, total, familyId, NLM_F_REQUEST, 1, 0);
+            NetlinkUtils.putGenlHdr(byteBuffer, cmd, GENL_VERSION);
+            if (hasUid)
+                NetlinkUtils.putAttrU32(byteBuffer, REKERNEL_A_UID, uid);
 
             try {
-                Os.write(fileDescriptor, bytes, 0, bytes.length);
+                Os.write(fileDescriptor, byteBuffer.array(), 0, total);
                 return true;
             } catch (ErrnoException _) {
             }
@@ -118,25 +105,14 @@ public class ReKernel {
             return false;
 
         try {
-            byte[] payload = new byte[8];
-            ByteBuffer cmdBuf = ByteBuffer.wrap(payload);
-            cmdBuf.order(ByteOrder.nativeOrder());
-            cmdBuf.putInt(add ? 2 : 3);
-            cmdBuf.putInt(uid);
-
-            byte[] bytes = new byte[16 + payload.length];
-            ByteBuffer byteBuffer = ByteBuffer.wrap(bytes);
-            byteBuffer.order(ByteOrder.nativeOrder());
-
-            byteBuffer.putInt(bytes.length);
-            byteBuffer.putShort((short) 0x11);
-            byteBuffer.putShort((short) 0x1);
-            byteBuffer.putInt(1);
-            byteBuffer.putInt(100);
-            byteBuffer.put(payload);
+            int total = NLMSG_HDRLEN + 8;
+            ByteBuffer byteBuffer = NetlinkUtils.nlBuf(total);
+            NetlinkUtils.putNlMsgHdr(byteBuffer, total, LEGACY_MSG_TYPE, NLM_F_REQUEST, 1, USER_PORT);
+            byteBuffer.putInt(add ? 2 : 3); // raw legacy cmd type (MONITOR_NET=2, DEL_MONITOR_NET=3)
+            byteBuffer.putInt(uid);
 
             try {
-                Os.write(fileDescriptor, bytes, 0, bytes.length);
+                Os.write(fileDescriptor, byteBuffer.array(), 0, total);
                 return true;
             } catch (ErrnoException _) {
             }
@@ -152,6 +128,7 @@ public class ReKernel {
 
         if (legacy)
             return monitorNet(uid, true);
+
         return sendCommand(REKERNEL_C_ADD_MONITOR_NET, true, uid);
     }
 
@@ -161,6 +138,7 @@ public class ReKernel {
 
         if (legacy)
             return monitorNet(uid, false);
+
         return sendCommand(REKERNEL_C_DEL_MONITOR_NET, true, uid);
     }
 
@@ -173,9 +151,8 @@ public class ReKernel {
                 File dir = new File("/proc/rekernel");
                 if (dir.exists()) {
                     File[] files = dir.listFiles();
-                    if (files == null) {
+                    if (files == null)
                         return -1;
-                    }
                     File unitFile = files[0];
                     netlinkUnit = GenericUtils.StringToInteger(unitFile.getName());
                 } else {
@@ -197,7 +174,6 @@ public class ReKernel {
             }
 
             Os.bind(descriptor, (SocketAddress) HiddenApiBypass.newInstance(Class.forName("android.system.NetlinkSocketAddress"), 100, 0));
-            //Os.bind(descriptor, new NetlinkSocketAddress(100, 0));
 
             fileDescriptor = descriptor;
 
@@ -207,20 +183,13 @@ public class ReKernel {
                 if (!defaultUnit) {
                     try {
                         byte[] message = "#proc_remove\u0000".getBytes(StandardCharsets.UTF_8);
-                        byte[] bytes = new byte[16 + message.length];
-                        ByteBuffer byteBuffer = ByteBuffer.wrap(bytes);
-                        byteBuffer.order(ByteOrder.nativeOrder());
-
-                        byteBuffer.putInt(bytes.length);
-                        byteBuffer.putShort((short) 0x11);
-                        byteBuffer.putShort((short) 0x1);
-                        byteBuffer.putInt(1);
-                        byteBuffer.putInt(100);
-
+                        int total = NLMSG_HDRLEN + message.length;
+                        ByteBuffer byteBuffer = NetlinkUtils.nlBuf(total);
+                        NetlinkUtils.putNlMsgHdr(byteBuffer, total, LEGACY_MSG_TYPE, NLM_F_REQUEST, 1, USER_PORT);
                         byteBuffer.put(message);
 
                         try {
-                            Os.write(descriptor, bytes, 0, bytes.length);
+                            Os.write(descriptor, byteBuffer.array(), 0, total);
                         } catch (ErrnoException _) {
                         }
                     } catch (Throwable throwable) {
@@ -228,24 +197,13 @@ public class ReKernel {
                     }
 
                     try {
-                        byte[] payload = new byte[4];
-                        ByteBuffer cmdBuf = ByteBuffer.wrap(payload);
-                        cmdBuf.order(ByteOrder.nativeOrder());
-                        cmdBuf.putInt(1);
-
-                        byte[] bytes = new byte[16 + payload.length];
-                        ByteBuffer byteBuffer = ByteBuffer.wrap(bytes);
-                        byteBuffer.order(ByteOrder.nativeOrder());
-
-                        byteBuffer.putInt(bytes.length);
-                        byteBuffer.putShort((short) 0x11);
-                        byteBuffer.putShort((short) 0x1);
-                        byteBuffer.putInt(1);
-                        byteBuffer.putInt(100);
-                        byteBuffer.put(payload);
+                        int total = NLMSG_HDRLEN + 4;
+                        ByteBuffer byteBuffer = NetlinkUtils.nlBuf(total);
+                        NetlinkUtils.putNlMsgHdr(byteBuffer, total, LEGACY_MSG_TYPE, NLM_F_REQUEST, 1, USER_PORT);
+                        byteBuffer.putInt(1); // REMOVE_PROC CMD
 
                         try {
-                            Os.write(descriptor, bytes, 0, bytes.length);
+                            Os.write(descriptor, byteBuffer.array(), 0, total);
                         } catch (ErrnoException _) {
                         }
                     } catch (Throwable throwable) {
@@ -282,59 +240,59 @@ public class ReKernel {
     private static void resolver(String data, Callback callback) {
         int indexOf = data.indexOf("type");
         int lastIndexOf = data.lastIndexOf(";");
-        if (indexOf >= 0 && lastIndexOf >= 0 && indexOf <= lastIndexOf) {
-            String message = data.substring(indexOf, lastIndexOf);
-            Map<String, String> params = new HashMap<>();
-            for (String keyValue : message.split(",")) {
-                String[] split = keyValue.split("=");
-                if (split.length == 2)
-                    params.put(split[0].trim(), split[1].trim());
-            }
+        if (indexOf < 0 || lastIndexOf < 0 || indexOf > lastIndexOf)
+            return;
 
-            String type = params.get("type");
-            switch (type) {
-                case "Binder" -> {
-                    int bindertype = switch (params.get("bindertype")) {
-                        case "transaction" -> Callback.BINDER_TRANSACTION;
-                        case "reply" -> Callback.BINDER_REPLY;
-                        case "free_buffer_full" -> Callback.BINDER_FREE_BUFFER_FULL;
-                        case null, default -> {
-                            callback.exception(new IllegalStateException("Unknown binder type: " + params.get("bindertype")));
-                            yield Callback.BINDER_UNKNOWN;
-                        }
-                    };
-                    boolean oneway = GenericUtils.StringToInteger(params.get("oneway")) == 1;
-                    int fromPid = GenericUtils.StringToInteger(params.get("from_pid"));
-                    int fromUid = GenericUtils.StringToInteger(params.get("from"));
-                    int targetPid = GenericUtils.StringToInteger(params.get("target_pid"));
-                    int targetUid = GenericUtils.StringToInteger(params.get("target"));
-                    String rpcName = params.get("rpc_name");
-                    int code = GenericUtils.StringToInteger(params.get("code"));
-                    callback.binder(bindertype, oneway, fromUid, fromPid, targetUid, targetPid, rpcName, code);
-                }
-                case "Signal" -> {
-                    int targetPid = GenericUtils.StringToInteger(params.get("dst_pid"));
-                    int targetUid = GenericUtils.StringToInteger(params.get("dst"));
-                    int killerPid = GenericUtils.StringToInteger(params.get("killer_pid"));
-                    int killerUid = GenericUtils.StringToInteger(params.get("killer"));
-                    int signal = GenericUtils.StringToInteger(params.get("signal"));
-                    callback.signal(signal, killerUid, killerPid, targetUid, targetPid);
-                }
-                case "Network" -> {
-                    int targetUid = GenericUtils.StringToInteger(params.get("target"));
-                    int proto = switch (params.get("proto")) {
-                        case "ipv4" -> Callback.PROTO_IPV4;
-                        case "ipv6" -> Callback.PROTO_IPV6;
-                        case null, default -> {
-                            callback.exception(new IllegalStateException("Unknown proto: " + params.get("proto")));
-                            yield Callback.PROTO_UNKNOWN;
-                        }
-                    };
-                    int dataLen = params.containsKey("data_len") ? GenericUtils.StringToInteger(params.get("data_len")) : Callback.DATA_LEN_UNKNOWN;
-                    callback.network(proto, targetUid, dataLen);
-                }
-                case null, default -> callback.exception(new IllegalStateException("Unknown type: " + params.get("type")));
+        String message = data.substring(indexOf, lastIndexOf);
+        Map<String, String> params = new HashMap<>();
+        for (String keyValue : message.split(",")) {
+            String[] split = keyValue.split("=");
+            if (split.length == 2)
+                params.put(split[0].trim(), split[1].trim());
+        }
+
+        switch (params.get("type")) {
+            case "Binder" -> {
+                int binderType = switch (params.get("bindertype")) {
+                    case "transaction" -> Callback.BINDER_TRANSACTION;
+                    case "reply" -> Callback.BINDER_REPLY;
+                    case "free_buffer_full" -> Callback.BINDER_FREE_BUFFER_FULL;
+                    case null, default -> {
+                        callback.exception(new IllegalStateException("Unknown binder type: " + params.get("bindertype")));
+                        yield Callback.BINDER_UNKNOWN;
+                    }
+                };
+                boolean oneway = GenericUtils.StringToInteger(params.get("oneway")) == 1;
+                int fromPid = GenericUtils.StringToInteger(params.get("from_pid"));
+                int fromUid = GenericUtils.StringToInteger(params.get("from"));
+                int targetPid = GenericUtils.StringToInteger(params.get("target_pid"));
+                int targetUid = GenericUtils.StringToInteger(params.get("target"));
+                String rpcName = params.get("rpc_name");
+                int code = GenericUtils.StringToInteger(params.get("code"));
+                callback.binder(binderType, oneway, fromUid, fromPid, targetUid, targetPid, rpcName, code);
             }
+            case "Signal" -> {
+                int targetPid = GenericUtils.StringToInteger(params.get("dst_pid"));
+                int targetUid = GenericUtils.StringToInteger(params.get("dst"));
+                int killerPid = GenericUtils.StringToInteger(params.get("killer_pid"));
+                int killerUid = GenericUtils.StringToInteger(params.get("killer"));
+                int signal = GenericUtils.StringToInteger(params.get("signal"));
+                callback.signal(signal, killerUid, killerPid, targetUid, targetPid);
+            }
+            case "Network" -> {
+                int targetUid = GenericUtils.StringToInteger(params.get("target"));
+                int proto = switch (params.get("proto")) {
+                    case "ipv4" -> Callback.PROTO_IPV4;
+                    case "ipv6" -> Callback.PROTO_IPV6;
+                    case null, default -> {
+                        callback.exception(new IllegalStateException("Unknown proto: " + params.get("proto")));
+                        yield Callback.PROTO_UNKNOWN;
+                    }
+                };
+                int dataLen = params.containsKey("data_len") ? GenericUtils.StringToInteger(params.get("data_len")) : Callback.DATA_LEN_UNKNOWN;
+                callback.network(proto, targetUid, dataLen);
+            }
+            case null, default -> callback.exception(new IllegalStateException("Unknown type: " + params.get("type")));
         }
     }
 
@@ -353,7 +311,6 @@ public class ReKernel {
             }
 
             Os.bind(descriptor, (SocketAddress) HiddenApiBypass.newInstance(Class.forName("android.system.NetlinkSocketAddress"), 0, 0));
-            //Os.bind(descriptor, new NetlinkSocketAddress());
 
             if (!resolveFamily(descriptor)) {
                 GenericUtils.closeAndSignalBlockedThreads(fileDescriptor);
@@ -400,7 +357,6 @@ public class ReKernel {
             cacheCallback.disconnected();
             cacheCallback = null;
         } catch (Throwable ignored) {
-
         }
     }
 
@@ -437,10 +393,10 @@ public class ReKernel {
         void exception(Exception exception);
 
         /**
-         * @param binderType {@link #BINDER_TRANSACTION}, {@link #BINDER_REPLY},
+         * @param type {@link #BINDER_TRANSACTION}, {@link #BINDER_REPLY},
          *                   or {@link #BINDER_FREE_BUFFER_FULL}
          */
-        void binder(int binderType, boolean oneway, int fromUid, int fromPid, int targetUid, int targetPid, String rpcName, int code);
+        void binder(int type, boolean oneway, int fromUid, int fromPid, int targetUid, int targetPid, String rpcName, int code);
 
         /**
          * @param signal   signal number sent
