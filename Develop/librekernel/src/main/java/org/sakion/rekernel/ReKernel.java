@@ -141,7 +141,10 @@ public class ReKernel {
     }
 
     public static boolean delMonitorNet(int uid) {
-        if (!isRunning())
+        if (!isRunning() || version == null)
+            return false;
+
+        if (getMajorVersion() < 9 || (getMajorVersion() == 9 && getMinorVersion() < 5))
             return false;
 
         if (legacy)
