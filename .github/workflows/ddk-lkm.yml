@@ -33,13 +33,8 @@ jobs:
           echo "=== Building rekernel.ko for KMI: $KMI ==="
           
           # Copy source files to binder directory
-          cp ./LKM-Source/rekernel.c /opt/ddk/src/$KMI/drivers/android/
-          cp ./LKM-Source/rekernel.h /opt/ddk/src/$KMI/drivers/android/
-          
-          # Add rekernel to binder Makefile if not already present
-          if ! grep -q "obj-m += rekernel.o" /opt/ddk/src/$KMI/drivers/android/Makefile; then
-            echo "obj-m += rekernel.o" >> /opt/ddk/src/$KMI/drivers/android/Makefile
-          fi
+          cp ./LKM-Source/*.c ./LKM-Source/*.h /opt/ddk/src/$KMI/drivers/android/
+          cat ./LKM-Source/Makefile >> /opt/ddk/src/$KMI/drivers/android/Makefile
           
           # Build
           cd /opt/ddk/src/$KMI
