@@ -316,8 +316,26 @@ static int rekernel_unit_open(struct inode *inode, struct file *file)
 	return single_open(file, rekernel_unit_show, NULL);
 }
 
+static int rekernel_version_show(struct seq_file *m, void *v)
+{
+	seq_printf(m, "%s\n", REKERNEL_VERSION);
+	return 0;
+}
+
+static int rekernel_version_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, rekernel_version_show, NULL);
+}
+
 static const struct proc_ops rekernel_unit_fops = {
 	.proc_open   = rekernel_unit_open,
+	.proc_read   = seq_read,
+	.proc_lseek   = seq_lseek,
+	.proc_release   = single_release,
+};
+
+static const struct proc_ops rekernel_version_fops = {
+	.proc_open   = rekernel_version_open,
 	.proc_read   = seq_read,
 	.proc_lseek   = seq_lseek,
 	.proc_release   = single_release,
@@ -356,9 +374,9 @@ int rekernel_netlink_start(void)
 			pr_err("create rekernel unit failed!\n");
 		} else {
 			char versionBuffer[32];
-			sprintf(versionBuffer, "%s", REKERNEL_VERSION);
+			sprintf(versionBuffer, "%s", "version");
 			rekernel_version_entry = proc_create(versionBuffer,
-				0644, rekernel_dir, &rekernel_unit_fops);
+				0644, rekernel_dir, &rekernel_version_fops);
 		}
 	}
 #else
