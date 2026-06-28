@@ -133,7 +133,7 @@ static inline bool rekernel_netlink_ready(void)
 }
 
 /* user -> kernel: add a uid to the network monitor hashmap. */
-static int rekernel_genl_monitor_net(struct sk_buff *skb, struct genl_info *info)
+static int rekernel_genl_add_monitor_net(struct sk_buff *skb, struct genl_info *info)
 {
 	uid_t muid;
 
@@ -171,8 +171,8 @@ static const struct nla_policy rekernel_genl_policy[REKERNEL_A_MAX + 1] = {
 
 static const struct genl_ops rekernel_genl_ops[] = {
 	{
-		.cmd  = REKERNEL_C_MONITOR_NET,
-		.doit = rekernel_genl_monitor_net,
+		.cmd  = REKERNEL_C_ADD_MONITOR_NET,
+		.doit = rekernel_genl_add_monitor_net,
 	},
 	{
 		.cmd  = REKERNEL_C_DEL_MONITOR_NET,
