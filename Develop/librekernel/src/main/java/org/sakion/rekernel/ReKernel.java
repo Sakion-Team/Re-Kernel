@@ -24,7 +24,7 @@ import android.system.ErrnoException;
 import android.system.Os;
 import android.system.OsConstants;
 
-import org.lsposed.hiddenapibypass.LSPass;
+import org.lsposed.hiddenapibypass.HiddenApiBypass;
 
 import java.io.File;
 import java.io.FileDescriptor;
@@ -196,7 +196,7 @@ public class ReKernel {
                 return -1;
             }
 
-            Os.bind(descriptor, (SocketAddress) LSPass.newInstance(Class.forName("android.system.NetlinkSocketAddress"), 100, 0));
+            Os.bind(descriptor, (SocketAddress) HiddenApiBypass.newInstance(Class.forName("android.system.NetlinkSocketAddress"), 100, 0));
             //Os.bind(descriptor, new NetlinkSocketAddress(100, 0));
 
             fileDescriptor = descriptor;
@@ -352,7 +352,7 @@ public class ReKernel {
                 return -1;
             }
 
-            Os.bind(descriptor, (SocketAddress) LSPass.newInstance(Class.forName("android.system.NetlinkSocketAddress"), 0, 0));
+            Os.bind(descriptor, (SocketAddress) HiddenApiBypass.newInstance(Class.forName("android.system.NetlinkSocketAddress"), 0, 0));
             //Os.bind(descriptor, new NetlinkSocketAddress());
 
             if (!resolveFamily(descriptor)) {
