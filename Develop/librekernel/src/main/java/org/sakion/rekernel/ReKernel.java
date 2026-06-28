@@ -395,6 +395,7 @@ public class ReKernel {
 
     public static void unregisterListener() {
         try {
+            executorService.shutdownNow();
             GenericUtils.closeAndSignalBlockedThreads(fileDescriptor);
             cacheCallback.disconnected();
             cacheCallback = null;
