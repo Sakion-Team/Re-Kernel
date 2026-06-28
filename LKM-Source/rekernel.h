@@ -2,7 +2,7 @@
 #define REKERNEL_H
 
 /* Re:Kernel version, single source of truth (used in logs and the version query). */
-#define REKERNEL_MAJOR_VERSION                "9.5"
+#define REKERNEL_MAJOR_VERSION                "10.0"
 
 #define CLEAN_UP_ASYNC_BINDER
 

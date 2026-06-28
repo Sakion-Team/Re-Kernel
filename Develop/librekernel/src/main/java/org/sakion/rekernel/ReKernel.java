@@ -144,7 +144,7 @@ public class ReKernel {
         if (!isRunning() || version == null)
             return false;
 
-        if (getMajorVersion() < 9 || (getMajorVersion() == 9 && getMinorVersion() < 5))
+        if (getMajorVersion() < 10)
             return false;
 
         if (legacy)
@@ -177,7 +177,7 @@ public class ReKernel {
         if (!isRunning() || version == null)
             return false;
 
-        if (getMajorVersion() < 9 || (getMajorVersion() == 9 && getMinorVersion() < 5))
+        if (getMajorVersion() < 10)
             return false;
 
         if (legacy)
