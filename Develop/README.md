@@ -19,7 +19,7 @@ code for both.
 ## Quick start
 
 ```java
-int result = ReKernel.registerListener(new ReKernel.Callback() {
+int result = ReKernel.Kernel.registerListener(new ReKernel.Callback() {
     @Override
     public void binder(int binderType, boolean oneway, int fromUid, int fromPid,
                        int targetUid, int targetPid, String rpcName, int code) {
@@ -42,7 +42,7 @@ int result = ReKernel.registerListener(new ReKernel.Callback() {
     }
 
     @Override
-    public void disconnected() {
+    public void disconnected(Category type) {
         // The connection dropped unexpectedly (not on a clean unregister).
     }
 
