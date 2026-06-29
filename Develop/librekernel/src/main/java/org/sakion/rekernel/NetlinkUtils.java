@@ -34,7 +34,7 @@ final class NetlinkUtils {
     static void putGenlHdr(ByteBuffer b, int cmd, int version) {
         b.put((byte) cmd);
         b.put((byte) version);
-        b.putShort((short) 0);  // reserved
+        b.putShort((short) 0);
     }
 
     /** Fixed 8-byte u32 attribute; already 4-aligned so no trailing padding. */
@@ -73,7 +73,7 @@ final class NetlinkUtils {
      * describe the current attribute. {@code type} is masked with {@link #NLA_TYPE_MASK}.
      */
     static final class AttrCursor {
-        int type, dataPos, dataLen;     // valid only after next() == true
+        int type, dataPos, dataLen;
 
         private final ByteBuffer b;
         private final int end;
@@ -89,7 +89,7 @@ final class NetlinkUtils {
             if (pos + NLA_HDRLEN > end)
                 return false;
             int len = b.getShort(pos) & 0xFFFF;
-            if (len < NLA_HDRLEN)       // matches the original loops' `break`
+            if (len < NLA_HDRLEN)
                 return false;
             type = b.getShort(pos + 2) & NLA_TYPE_MASK;
             dataPos = pos + NLA_HDRLEN;
