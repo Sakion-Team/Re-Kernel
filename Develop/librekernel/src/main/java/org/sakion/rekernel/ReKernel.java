@@ -91,7 +91,7 @@ public class ReKernel {
                 int fromUid = StringToInteger(params.get("from"));
                 int targetPid = StringToInteger(params.get("target_pid"));
                 int targetUid = StringToInteger(params.get("target"));
-                String rpcName = params.get("rpc_name");
+                String rpcName = params.getOrDefault("rpc_name", "");
                 int code = StringToInteger(params.get("code"));
                 callback.binder(binderType, oneway, fromUid, fromPid, targetUid, targetPid, rpcName, code);
             }

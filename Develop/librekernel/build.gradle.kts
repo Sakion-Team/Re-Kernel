@@ -10,12 +10,12 @@ configure<LibraryExtension> {
 
     defaultConfig {
         minSdk = 29
-        lint.targetSdk = 36
-        compileSdk = 36
-
-        consumerProguardFiles("consumer-rules.pro")
+        compileSdk = 37
     }
 
+    lint {
+        targetSdk = 37
+    }
 
     buildTypes {
         release {
