@@ -1,0 +1,60 @@
+name: Build eBPF
+
+on:
+  push:
+    paths:
+      - 'eBPF-Source/**'
+      - '.github/workflows/ebpf-build.yml'
+  pull_request:
+    paths:
+      - 'eBPF-Source/**'
+      - '.github/workflows/ebpf-build.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: aarch64 (Android NDK)
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: eBPF-Source
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check vendored deps
+        run: |
+          missing=
+          for f in include/vmlinux.h include/bpf/bpf_helpers.h \
+                   lib/aarch64/libbpf.a lib/aarch64/libelf.a lib/aarch64/libzstd.a; do
+            [ -f "$f" ] || missing="$missing $f"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::Missing vendored files:$missing — commit them (see README)."
+            exit 1
+          fi
+          # arm64 BTF must contain a complete user_pt_regs; x86/host vmlinux.h does not.
+          if ! grep -q 'struct user_pt_regs {' include/vmlinux.h; then
+            echo "::error::include/vmlinux.h has no complete 'struct user_pt_regs' — it is not from an arm64 device. Regenerate it from the TARGET device's BTF (see README)."
+            exit 1
+          fi
+
+      - name: Set up Android NDK
+        id: ndk
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r27c
+
+      - name: Build
+        run: make ARCH=aarch64 API=35 NDK_PATH=${{ steps.ndk.outputs.ndk-path }}
+
+      - name: Verify arch
+        run: file out/rekernel.bpf.o out/rekerneld_aarch64
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: rekernel-ebpf-aarch64
+          path: |
+            eBPF-Source/out/rekernel.bpf.o
+            eBPF-Source/out/rekerneld_aarch64
+          if-no-files-found: error

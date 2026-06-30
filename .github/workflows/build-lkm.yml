@@ -1,5 +1,10 @@
 name: Build LKM for Re:Kernel
 on:
+  push:
+    paths:
+      - 'LKM-Source/**'
+      - '.github/workflows/ddk-lkm.yml'
+      - '.github/workflows/build-lkm.yml'
   workflow_dispatch:
 jobs:
   build-lkm:
