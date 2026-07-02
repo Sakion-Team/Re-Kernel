@@ -105,14 +105,14 @@ public class ReKernel {
             }
             case "Network" -> {
                 int targetUid = StringToInteger(params.get("target"));
-                int proto = switch (params.get("proto")) {
+                int proto = params.containsKey("proto") ? switch (params.get("proto")) {
                     case "ipv4" -> Callback.PROTO_IPV4;
                     case "ipv6" -> Callback.PROTO_IPV6;
                     case null, default -> {
                         callback.exception(new IllegalStateException("Unknown proto: " + params.get("proto")));
                         yield Callback.PROTO_UNKNOWN;
                     }
-                };
+                } : Callback.PROTO_UNKNOWN;
                 int dataLen = params.containsKey("data_len") ? StringToInteger(params.get("data_len")) : Callback.DATA_LEN_UNKNOWN;
                 callback.network(proto, targetUid, dataLen);
             }
