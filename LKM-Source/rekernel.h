@@ -3,7 +3,6 @@
 
 /* Re:Kernel version, single source of truth (used in logs and the version query). */
 #define REKERNEL_MAJOR_VERSION                "11.0"
-
 #define CLEAN_UP_ASYNC_BINDER
 
 #define MIN_USERAPP_UID                 (10000)

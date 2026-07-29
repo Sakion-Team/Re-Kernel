@@ -61,16 +61,9 @@ obj-$(CONFIG_REKERNEL) += rekernel/' $i
 #endif /* CONFIG_REKERNEL */' $i
 
 		if grep -q 'binder_find_outdated_transaction_ilocked' $i; then
-			sed -i '/if ((t1->flags & t2->flags & (TF_ONE_WAY | TF_UPDATE_TXN)) !=/i\
-#ifdef CONFIG_REKERNEL\
-	if ((t1->flags & t2->flags & TF_ONE_WAY) != TF_ONE_WAY || !t1->to_proc || !t2->to_proc)\
-#else' $i
-			sed -i '/(TF_ONE_WAY | TF_UPDATE_TXN) || !t1->to_proc || !t2->to_proc)/a\
-#endif /* CONFIG_REKERNEL */' $i
-
 			sed -i '/if ((t->flags & TF_UPDATE_TXN) && proc->is_frozen) {/i\
 #ifdef CONFIG_REKERNEL\
-		if (frozen_task_group(proc->tsk)) {\
+		if ((t->flags & TF_UPDATE_TXN) && frozen_task_group(proc->tsk)) {\
 #else' $i
 			sed -i '/if ((t->flags & TF_UPDATE_TXN) && proc->is_frozen) {/a\
 #endif /* CONFIG_REKERNEL */' $i
@@ -89,7 +82,7 @@ obj-$(CONFIG_REKERNEL) += rekernel/' $i
 static bool binder_can_update_transaction(struct binder_transaction *t1,\
 						struct binder_transaction *t2)\
 {\
-	if ((t1->flags & t2->flags & TF_ONE_WAY) != TF_ONE_WAY || !t1->to_proc || !t2->to_proc)\
+	if ((t1->flags & t2->flags & (TF_ONE_WAY | TF_UPDATE_TXN)) != (TF_ONE_WAY | TF_UPDATE_TXN) || !t1->to_proc || !t2->to_proc)\
 		return false;\
 	if (t1->to_proc->tsk == t2->to_proc->tsk && t1->code == t2->code &&\
 		t1->flags == t2->flags && t1->buffer->pid == t2->buffer->pid &&\
@@ -140,7 +133,7 @@ binder_find_outdated_transaction_ilocked(struct binder_transaction *t,\
 			binder_enqueue_work_ilocked_line=$(awk '/binder_enqueue_work_ilocked\(&t->work, &proc->todo\);/{print NR}' $i)
 				sed -i ''"$((binder_enqueue_work_ilocked_line + 1))"'a\
 #ifdef CONFIG_REKERNEL\
-		if (frozen_task_group(proc->tsk)) {\
+		if ((t->flags & TF_UPDATE_TXN) && frozen_task_group(proc->tsk)) {\
 			t_outdated = binder_find_outdated_transaction_ilocked(t,\
 											&node->async_todo);\
 			if (t_outdated) {\

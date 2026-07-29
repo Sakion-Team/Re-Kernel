@@ -24,37 +24,51 @@ static int __init start_rekernel(void)
 
 	if (register_binder() != LINE_SUCCESS) {
 		pr_err("%s: Failed to hook binder!\n", __func__);
-		return LINE_ERROR;
+		goto stop_netlink;
 	}
 
 	if (register_signal() != LINE_SUCCESS) {
 		pr_err("%s: Failed to hook signal!\n", __func__);
-		return LINE_ERROR;
+		goto unregister_binder_hook;
 	}
 
 	if (register_netfilter() != LINE_SUCCESS) {
 		pr_err("%s: Failed to hook netfilter!\n", __func__);
-		return LINE_ERROR;
+		goto unregister_signal_hook;
 	}
 
 #ifdef CLEAN_UP_ASYNC_BINDER
 	if (register_kp() != LINE_SUCCESS) {
 		pr_err("%s: Failed to hook kprobe!\n", __func__);
-		return LINE_ERROR;
+		goto unregister_netfilter_hook;
 	}
 #endif
 
 	pr_info("Re-Kernel hooked!\n");
 	return LINE_SUCCESS;
+
+#ifdef CLEAN_UP_ASYNC_BINDER
+unregister_netfilter_hook:
+#endif
+	unregister_netfilter();
+unregister_signal_hook:
+	unregister_signal();
+unregister_binder_hook:
+	unregister_binder();
+stop_netlink:
+	rekernel_netlink_stop();
+	return LINE_ERROR;
 }
 
 static void __exit exit_rekernel(void)
 {
 	pr_info("Re-Kernel closing...\n");
-	unregister_binder();
-	unregister_signal();
-	unregister_netfilter();
+#ifdef CLEAN_UP_ASYNC_BINDER
 	unregister_kp();
+#endif
+	unregister_netfilter();
+	unregister_signal();
+	unregister_binder();
 	rekernel_netlink_stop();
 }
 

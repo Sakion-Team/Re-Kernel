@@ -6,27 +6,28 @@
  *              alloc/preset/reply/transaction emit events when a frozen target
  *              is about to be woken; a live kprobe on binder_proc_transaction
  *              (CLEAN_UP_ASYNC_BINDER) frees superseded outdated async
- *              transactions when identity and pure-data payload match.
+ *              transactions only when userspace marks them TF_UPDATE_TXN.
  *              Non-exported binder symbols are resolved via a transient
- *              kprobe on kallsyms_lookup_name; Linux < 6.0 uses a local
- *              binder buffer copy helper instead of binder_alloc_copy_from_buffer.
+ *              kprobe on kallsyms_lookup_name.
  */
 #include <linux/version.h>
 #include <linux/uaccess.h>
 #include <linux/slab.h>
 #include <linux/list.h>
 #include <linux/kprobes.h>
-#include <linux/string.h>
 #include <trace/hooks/binder.h>
 #include <../android/binder_internal.h>
 #include "rekernel_internal.h"
-#include "rekernel_binder_alloc.h"
 
+#ifdef CLEAN_UP_ASYNC_BINDER
 static unsigned long (*re_kallsyms_lookup_name)(const char* name);
 static void (*re_kernel_transaction_buffer_release)(struct binder_proc* proc, struct binder_thread* thread, struct binder_buffer* buffer, binder_size_t off_end_offset, bool is_failure);
 static void (*re_kernel_alloc_free_buf)(struct binder_alloc* alloc, struct binder_buffer* buffer);
-static int (*re_kernel_alloc_copy_from_buffer)(struct binder_alloc* alloc, void* dest, struct binder_buffer* buffer, binder_size_t buffer_offset, size_t bytes);
 static struct binder_stats(*re_kernel_stats);
+
+/* Stable UAPI value; some older vendor headers do not name this flag. */
+#define REKERNEL_TF_UPDATE_TXN 0x40
+#endif
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0))
 static void line_binder_alloc_new_buf_locked(void *data, size_t size, size_t *free_async_space, int is_async, bool *should_fail)
@@ -183,6 +184,7 @@ static void line_binder_transaction(void *data, struct binder_proc *target_proc,
 	}
 }
 
+#ifdef CLEAN_UP_ASYNC_BINDER
 static inline void binder_inner_proc_lock(struct binder_proc* proc)
 __acquires(&proc->inner_lock)
 {
@@ -207,47 +209,23 @@ __releases(&node->lock)
 	spin_unlock(&node->lock);
 }
 
-/* Compare pure-data binder buffer payload for free-first matching. */
-static bool binder_buffer_data_equal(struct binder_proc* proc,
-	struct binder_buffer* b1, struct binder_buffer* b2)
-{
-	size_t pos, chunk, total;
-	u8 c1[64];
-	u8 c2[64];
-
-	if (!proc || !b1 || !b2 || !re_kernel_alloc_copy_from_buffer)
-		return false;
-	if (b1->data_size != b2->data_size)
-		return false;
-	if (b1->offsets_size != 0 || b2->offsets_size != 0)
-		return false;
-
-	total = b1->data_size;
-	pos = 0;
-	while (pos < total) {
-		chunk = total - pos;
-		if (chunk > sizeof(c1))
-			chunk = sizeof(c1);
-		if (re_kernel_alloc_copy_from_buffer(&proc->alloc, c1, b1, pos, chunk))
-			return false;
-		if (re_kernel_alloc_copy_from_buffer(&proc->alloc, c2, b2, pos, chunk))
-			return false;
-		if (memcmp(c1, c2, chunk))
-			return false;
-		pos += chunk;
-	}
-	return true;
-}
-
 static bool binder_can_update_transaction(struct binder_transaction* t1, struct binder_transaction* t2)
 {
-	if ((t1->flags & t2->flags & TF_ONE_WAY) != TF_ONE_WAY || !t1->to_proc || !t2->to_proc)
+	if (!t1 || !t2 || !t1->buffer || !t2->buffer ||
+	    !t1->buffer->target_node || !t2->buffer->target_node ||
+	    !t1->to_proc || !t2->to_proc)
+		return false;
+	if ((t1->flags & t2->flags & (TF_ONE_WAY | REKERNEL_TF_UPDATE_TXN)) !=
+	    (TF_ONE_WAY | REKERNEL_TF_UPDATE_TXN))
+		return false;
+	/* Avoid releasing embedded Binder objects or FDs from a kprobe handler. */
+	if (t1->buffer->offsets_size != 0 || t2->buffer->offsets_size != 0)
 		return false;
 	if (t1->to_proc->tsk == t2->to_proc->tsk && t1->code == t2->code &&
 		t1->flags == t2->flags && t1->buffer->pid == t2->buffer->pid &&
 		t1->buffer->target_node->ptr == t2->buffer->target_node->ptr &&
 		t1->buffer->target_node->cookie == t2->buffer->target_node->cookie)
-		return binder_buffer_data_equal(t1->to_proc, t1->buffer, t2->buffer);
+		return true;
 	return false;
 }
 
@@ -255,7 +233,6 @@ static struct binder_transaction* binder_find_outdated_transaction_ilocked(struc
 	struct list_head* target_list)
 {
 	struct binder_work* w;
-	// bool second = false;
 
 	list_for_each_entry(w, target_list, entry) {
 		struct binder_transaction* t_queued;
@@ -263,12 +240,8 @@ static struct binder_transaction* binder_find_outdated_transaction_ilocked(struc
 		if (w->type != BINDER_WORK_TRANSACTION)
 			continue;
 		t_queued = container_of(w, struct binder_transaction, work);
-		if (binder_can_update_transaction(t_queued, t)) {
-			// if (second)
+		if (binder_can_update_transaction(t_queued, t))
 			return t_queued;
-			// else
-				// second = true;
-		}
 	}
 	return NULL;
 }
@@ -294,11 +267,19 @@ static int __nocfi binder_proc_transaction_pre(struct kprobe* p, struct pt_regs*
 {
 	struct binder_transaction* t = (struct binder_transaction*)regs->regs[0];
 	struct binder_proc* proc = (struct binder_proc*)regs->regs[1];
-
-	struct binder_node* node = t->buffer->target_node;
+	struct binder_node* node;
 	struct binder_transaction* t_outdated = NULL;
 
-	if (!node || !proc || proc->is_frozen || !(t->flags & TF_ONE_WAY))
+	if (!t || !proc || !proc->tsk || !t->buffer)
+		return 0;
+	if (proc->is_frozen ||
+	    (t->flags & (TF_ONE_WAY | REKERNEL_TF_UPDATE_TXN)) !=
+	    (TF_ONE_WAY | REKERNEL_TF_UPDATE_TXN) ||
+	    t->buffer->offsets_size != 0)
+		return 0;
+
+	node = t->buffer->target_node;
+	if (!node)
 		return 0;
 
 	if (line_is_frozen(proc->tsk)) {
@@ -309,10 +290,11 @@ static int __nocfi binder_proc_transaction_pre(struct kprobe* p, struct pt_regs*
 		}
 		binder_inner_proc_lock(proc);
 		t_outdated = binder_find_outdated_transaction_ilocked(t, &node->async_todo);
-		if (t_outdated) {
+		if (t_outdated && proc->outstanding_txns > 0) {
 			list_del_init(&t_outdated->work.entry);
 			proc->outstanding_txns--;
-		}
+		} else
+			t_outdated = NULL;
 		binder_inner_proc_unlock(proc);
 		binder_node_unlock(node);
 
@@ -331,6 +313,7 @@ static int __nocfi binder_proc_transaction_pre(struct kprobe* p, struct pt_regs*
 	}
 	return 0;
 }
+#endif
 
 int register_binder(void)
 {
@@ -343,19 +326,27 @@ int register_binder(void)
 	rc = register_trace_android_vh_binder_preset(line_binder_preset, NULL);
 	if (rc != LINE_SUCCESS) {
 		pr_err("register_trace_android_vh_binder_preset failed, rc=%d\n", rc);
-		return rc;
+		goto unregister_alloc_hook;
 	}
 	rc = register_trace_android_vh_binder_reply(line_binder_reply, NULL);
 	if (rc != LINE_SUCCESS) {
 		pr_err("register_trace_android_vh_binder_reply failed, rc=%d\n", rc);
-		return rc;
+		goto unregister_preset_hook;
 	}
 	rc = register_trace_android_vh_binder_trans(line_binder_transaction, NULL);
 	if (rc != LINE_SUCCESS) {
 		pr_err("register_trace_android_vh_binder_trans failed, rc=%d\n", rc);
-		return rc;
+		goto unregister_reply_hook;
 	}
 	return LINE_SUCCESS;
+
+unregister_reply_hook:
+	unregister_trace_android_vh_binder_reply(line_binder_reply, NULL);
+unregister_preset_hook:
+	unregister_trace_android_vh_binder_preset(line_binder_preset, NULL);
+unregister_alloc_hook:
+	unregister_trace_android_vh_binder_alloc_new_buf_locked(line_binder_alloc_new_buf_locked, NULL);
+	return rc;
 }
 
 void unregister_binder(void)
@@ -366,6 +357,7 @@ void unregister_binder(void)
 	unregister_trace_android_vh_binder_trans(line_binder_transaction, NULL);
 }
 
+#ifdef CLEAN_UP_ASYNC_BINDER
 static struct kprobe kp_kallsyms_lookup_name = {
 	.symbol_name = "kallsyms_lookup_name"
 };
@@ -388,20 +380,14 @@ int __nocfi register_kp(void) {
 	re_kernel_transaction_buffer_release = (void*)re_kallsyms_lookup_name("binder_transaction_buffer_release");
 	re_kernel_alloc_free_buf = (void*)re_kallsyms_lookup_name("binder_alloc_free_buf");
 	re_kernel_stats = (void*)re_kallsyms_lookup_name("binder_stats");
-#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 0, 0)
-	re_kernel_alloc_copy_from_buffer = rekernel_binder_copy_from_buffer;
-#else
-	re_kernel_alloc_copy_from_buffer = (void*)re_kallsyms_lookup_name("binder_alloc_copy_from_buffer");
-#endif
-
 	if (re_kernel_transaction_buffer_release == NULL || re_kernel_alloc_free_buf == NULL ||
-	    re_kernel_alloc_copy_from_buffer == NULL || re_kernel_stats == NULL) {
+	    re_kernel_stats == NULL) {
 		rc = -EINVAL;
 		pr_err("register kprobe kallsyms_lookup_name failed, rc=%d\n", rc);
 		return rc;
 	}
 
-	register_kprobe(&kp_binder_proc_transaction);
+	rc = register_kprobe(&kp_binder_proc_transaction);
 	if (rc != LINE_SUCCESS) {
 		pr_err("register binder_proc_transaction hooks failed, rc=%d\n", rc);
 		return rc;
@@ -413,3 +399,4 @@ int __nocfi register_kp(void) {
 void unregister_kp(void) {
 	unregister_kprobe(&kp_binder_proc_transaction);
 }
+#endif
