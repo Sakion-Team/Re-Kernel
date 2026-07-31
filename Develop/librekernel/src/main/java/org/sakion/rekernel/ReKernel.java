@@ -627,7 +627,7 @@ public class ReKernel {
                         if (files.length == 1)
                             netlinkUnit = StringToInteger(file.getName());
                         else if (file.getName().equals("version")) {
-                            setVersion(Files.readAllLines(file.toPath()).get(0));;
+                            setVersion(Files.readAllLines(file.toPath()).get(0));
                             netlinkUnit = StringToInteger(files[1].getName());
                         } else {
                             setVersion(Files.readAllLines(files[1].toPath()).get(0));
