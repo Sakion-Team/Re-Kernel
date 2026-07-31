@@ -577,6 +577,9 @@ public class ReKernel {
          * module, an unsupported module, or any error.
          */
         private static String readVersion() {
+            if (isLegacy())
+                return null;
+            
             FileDescriptor descriptor = null;
             try {
                 descriptor = Os.socket(OsConstants.AF_NETLINK, OsConstants.SOCK_DGRAM, NETLINK_GENERIC);
