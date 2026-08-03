@@ -25,6 +25,8 @@ import android.net.LocalSocket;
 import android.net.LocalSocketAddress;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.os.Looper;
+import android.os.SystemClock;
 import android.system.ErrnoException;
 import android.system.Os;
 import android.system.OsConstants;
@@ -41,18 +43,33 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class ReKernel {
     private ReKernel() {}
 
-    private static final HandlerThread THREAD = create();
+    public static final HandlerThread THREAD = create();
     private static HandlerThread create() {
         HandlerThread t = new HandlerThread("Re-Kernel");
         t.start();
         return t;
     }
-    private static final Handler HANDLER = new Handler(THREAD.getLooper());
+    public static final Handler HANDLER = new Handler(THREAD.getLooper());
+
+    public static boolean destroyHandler() {
+        try {
+            HANDLER.removeCallbacksAndMessages(null);
+            HANDLER.getLooper().quit();
+            THREAD.quit();
+            return true;
+        } catch (Throwable ignored) {
+            return false;
+        }
+    }
 
     private static void resolver(Callback.Category category, AsciiView data, Callback callback) {
         int indexOf = data.indexOf("type");
@@ -579,7 +596,7 @@ public class ReKernel {
         private static String readVersion() {
             if (isLegacy())
                 return null;
-            
+
             FileDescriptor descriptor = null;
             try {
                 descriptor = Os.socket(OsConstants.AF_NETLINK, OsConstants.SOCK_DGRAM, NETLINK_GENERIC);
