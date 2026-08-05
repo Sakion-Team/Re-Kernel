@@ -5,8 +5,9 @@
  * Description: Re:Kernel binder hooks. Android vendor hooks for binder
  *              alloc/preset/reply/transaction emit events when a frozen target
  *              is about to be woken; a live kprobe on binder_proc_transaction
- *              (CLEAN_UP_ASYNC_BINDER) frees superseded outdated async
- *              transactions only when userspace marks them TF_UPDATE_TXN.
+ *              (CLEAN_UP_ASYNC_BINDER) drops superseded stale async
+ *              transactions queued for frozen targets, with extra cleanup
+ *              when the target's async buffer space is under pressure.
  *              Non-exported binder symbols are resolved via a transient
  *              kprobe on kallsyms_lookup_name.
  */
@@ -27,6 +28,7 @@ static struct binder_stats(*re_kernel_stats);
 
 /* Stable UAPI value; some older vendor headers do not name this flag. */
 #define REKERNEL_TF_UPDATE_TXN 0x40
+#define REKERNEL_ASYNC_CLEANUP_MAX 32
 #endif
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0))
@@ -209,28 +211,37 @@ __releases(&node->lock)
 	spin_unlock(&node->lock);
 }
 
-static bool binder_can_update_transaction(struct binder_transaction* t1, struct binder_transaction* t2)
+static bool binder_can_cleanup_transaction(struct binder_transaction* t1,
+	struct binder_transaction* t2)
 {
 	if (!t1 || !t2 || !t1->buffer || !t2->buffer ||
 	    !t1->buffer->target_node || !t2->buffer->target_node ||
 	    !t1->to_proc || !t2->to_proc)
 		return false;
-	if ((t1->flags & t2->flags & (TF_ONE_WAY | REKERNEL_TF_UPDATE_TXN)) !=
-	    (TF_ONE_WAY | REKERNEL_TF_UPDATE_TXN))
+	if (!(t1->flags & TF_ONE_WAY) || !(t2->flags & TF_ONE_WAY))
 		return false;
+	/* TF_UPDATE_TXN is carried by the replacement; old queued work need not have it. */
 	/* Avoid releasing embedded Binder objects or FDs from a kprobe handler. */
-	if (t1->buffer->offsets_size != 0 || t2->buffer->offsets_size != 0)
+	/* The incoming transaction is never released here, so its offsets are safe. */
+	if (t1->buffer->offsets_size != 0)
 		return false;
 	if (t1->to_proc->tsk == t2->to_proc->tsk && t1->code == t2->code &&
-		t1->flags == t2->flags && t1->buffer->pid == t2->buffer->pid &&
+		((t1->flags ^ t2->flags) & ~REKERNEL_TF_UPDATE_TXN) == 0 &&
+		t1->buffer->pid == t2->buffer->pid &&
 		t1->buffer->target_node->ptr == t2->buffer->target_node->ptr &&
 		t1->buffer->target_node->cookie == t2->buffer->target_node->cookie)
 		return true;
 	return false;
 }
 
-static struct binder_transaction* binder_find_outdated_transaction_ilocked(struct binder_transaction* t,
-	struct list_head* target_list)
+static bool binder_can_force_cleanup_transaction(struct binder_transaction* t)
+{
+	return t && t->buffer && t->buffer->offsets_size == 0 &&
+		(t->flags & TF_ONE_WAY);
+}
+
+static struct binder_transaction* binder_find_outdated_transaction_ilocked(
+	struct binder_transaction* t, struct list_head* target_list, bool force_cleanup)
 {
 	struct binder_work* w;
 
@@ -240,8 +251,20 @@ static struct binder_transaction* binder_find_outdated_transaction_ilocked(struc
 		if (w->type != BINDER_WORK_TRANSACTION)
 			continue;
 		t_queued = container_of(w, struct binder_transaction, work);
-		if (binder_can_update_transaction(t_queued, t))
+		if (binder_can_cleanup_transaction(t_queued, t))
 			return t_queued;
+	}
+
+	if (force_cleanup) {
+		list_for_each_entry(w, target_list, entry) {
+			struct binder_transaction* t_queued;
+
+			if (w->type != BINDER_WORK_TRANSACTION)
+				continue;
+			t_queued = container_of(w, struct binder_transaction, work);
+			if (binder_can_force_cleanup_transaction(t_queued))
+				return t_queued;
+		}
 	}
 	return NULL;
 }
@@ -263,19 +286,36 @@ static inline void binder_stats_deleted(enum binder_stat_types type)
 	atomic_inc(&re_kernel_stats->obj_deleted[type]);
 }
 
+static inline void __nocfi binder_discard_transaction(struct binder_proc* proc,
+	struct binder_transaction* transaction)
+{
+	struct binder_buffer* buffer = transaction->buffer;
+
+	if (!buffer) {
+		kfree(transaction);
+		binder_stats_deleted(BINDER_STAT_TRANSACTION);
+		return;
+	}
+	transaction->buffer = NULL;
+	buffer->transaction = NULL;
+	binder_release_entire_buffer(proc, NULL, buffer, false);
+	re_kernel_alloc_free_buf(&proc->alloc, buffer);
+	kfree(transaction);
+	binder_stats_deleted(BINDER_STAT_TRANSACTION);
+}
+
 static int __nocfi binder_proc_transaction_pre(struct kprobe* p, struct pt_regs* regs)
 {
 	struct binder_transaction* t = (struct binder_transaction*)regs->regs[0];
 	struct binder_proc* proc = (struct binder_proc*)regs->regs[1];
 	struct binder_node* node;
-	struct binder_transaction* t_outdated = NULL;
+	struct binder_transaction* t_outdated;
+	unsigned int cleanup_count = 0;
+	bool force_cleanup;
 
 	if (!t || !proc || !proc->tsk || !t->buffer)
 		return 0;
-	if (proc->is_frozen ||
-	    (t->flags & (TF_ONE_WAY | REKERNEL_TF_UPDATE_TXN)) !=
-	    (TF_ONE_WAY | REKERNEL_TF_UPDATE_TXN) ||
-	    t->buffer->offsets_size != 0)
+	if (proc->is_frozen || !(t->flags & TF_ONE_WAY))
 		return 0;
 
 	node = t->buffer->target_node;
@@ -283,32 +323,36 @@ static int __nocfi binder_proc_transaction_pre(struct kprobe* p, struct pt_regs*
 		return 0;
 
 	if (line_is_frozen(proc->tsk)) {
-		binder_node_lock(node);
-		if (!node->has_async_transaction) {
-			binder_node_unlock(node);
-			return 0;
-		}
-		binder_inner_proc_lock(proc);
-		t_outdated = binder_find_outdated_transaction_ilocked(t, &node->async_todo);
-		if (t_outdated && proc->outstanding_txns > 0) {
-			list_del_init(&t_outdated->work.entry);
-			proc->outstanding_txns--;
-		} else
-			t_outdated = NULL;
-		binder_inner_proc_unlock(proc);
-		binder_node_unlock(node);
+		force_cleanup = proc->alloc.free_async_space < WARN_AHEAD_SPACE ||
+			proc->alloc.free_async_space <
+			3 * (t->buffer->data_size + sizeof(struct binder_buffer));
 
-		if (t_outdated) {
-			struct binder_buffer* buffer = t_outdated->buffer;
+		while (cleanup_count++ < REKERNEL_ASYNC_CLEANUP_MAX) {
+			t_outdated = NULL;
+			binder_node_lock(node);
+			if (!node->has_async_transaction) {
+				binder_node_unlock(node);
+				break;
+			}
+			binder_inner_proc_lock(proc);
+			t_outdated = binder_find_outdated_transaction_ilocked(t, &node->async_todo,
+				force_cleanup);
+			if (t_outdated) {
+				list_del_init(&t_outdated->work.entry);
+				if (proc->outstanding_txns > 0)
+					proc->outstanding_txns--;
+				if (list_empty(&node->async_todo))
+					node->has_async_transaction = false;
+			}
+			binder_inner_proc_unlock(proc);
+			binder_node_unlock(node);
+			if (!t_outdated)
+				break;
+
 #ifdef DEBUG
 			pr_info("[Re-Kernel LKM] free_outdated txn %d supersedes %d\n", t->debug_id, t_outdated->debug_id);
 #endif
-			t_outdated->buffer = NULL;
-			buffer->transaction = NULL;
-			binder_release_entire_buffer(proc, NULL, buffer, false);
-			re_kernel_alloc_free_buf(&proc->alloc, buffer);
-			kfree(t_outdated);
-			binder_stats_deleted(BINDER_STAT_TRANSACTION);
+			binder_discard_transaction(proc, t_outdated);
 		}
 	}
 	return 0;
