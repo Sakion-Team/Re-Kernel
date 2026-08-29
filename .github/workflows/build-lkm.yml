@@ -29,6 +29,8 @@ jobs:
             ddk_release: '20251104'
           - kmi: android16-6.12
             ddk_release: '20260313'
+          - kmi: android17-6.18
+            ddk_release: '20260828'
     uses: ./.github/workflows/ddk-lkm.yml
     with:
       kmi: ${{ matrix.kmi }}
