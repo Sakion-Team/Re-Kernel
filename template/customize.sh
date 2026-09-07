@@ -12,6 +12,7 @@ if [[ "$KERNEL_VERSION" == *"android"* ]]; then
     AND_VER=${KERNEL_VERSION#*-android}
     AND_VER=${AND_VER%%-*}
 else
+    [ "$CORE_VER" = "6.18" ] && AND_VER="17"
     [ "$CORE_VER" = "6.12" ] && AND_VER="16"
     [ "$CORE_VER" = "6.6" ]  && AND_VER="15"
     [ "$CORE_VER" = "6.1" ]  && AND_VER="14"
