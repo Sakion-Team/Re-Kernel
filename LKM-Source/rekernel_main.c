@@ -3,7 +3,7 @@
  *
  * File name: rekernel_main.c
  * Description: Re:Kernel module init/exit. Brings up the netlink transport, then
- *              registers the binder / signal / netfilter / kprobe hooks (and
+ *              registers the binder / signal / netfilter / async cleanup hooks (and
  *              tears them down in reverse on exit).
  * Author: nep_timeline@outlook.com
  * Last Modification:  2026/06/28
@@ -38,8 +38,8 @@ static int __init start_rekernel(void)
 	}
 
 #ifdef CLEAN_UP_ASYNC_BINDER
-	if (register_kp() != LINE_SUCCESS) {
-		pr_err("%s: Failed to hook kprobe!\n", __func__);
+	if (register_binder_cleanup() != LINE_SUCCESS) {
+		pr_err("%s: Failed to hook binder async cleanup!\n", __func__);
 		goto unregister_netfilter_hook;
 	}
 #endif
@@ -64,7 +64,7 @@ static void __exit exit_rekernel(void)
 {
 	pr_info("Re-Kernel closing...\n");
 #ifdef CLEAN_UP_ASYNC_BINDER
-	unregister_kp();
+	unregister_binder_cleanup();
 #endif
 	unregister_netfilter();
 	unregister_signal();
