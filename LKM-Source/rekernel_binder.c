@@ -4,9 +4,9 @@
  * File name: rekernel_binder.c
  * Description: Re:Kernel binder hooks. Android vendor hooks for binder
  *              alloc/preset/reply/transaction emit events when a frozen target
- *              is about to be woken; a live kprobe on binder_proc_transaction
- *              (CLEAN_UP_ASYNC_BINDER) frees superseded outdated async
- *              transactions only when userspace marks them TF_UPDATE_TXN.
+ *              is about to be woken. Standard Binder allocation/write-done
+ *              tracepoints (CLEAN_UP_ASYNC_BINDER) arrange deferred cleanup
+ *              of superseded async transactions marked TF_UPDATE_TXN.
  *              Non-exported binder symbols are resolved via a transient
  *              kprobe on kallsyms_lookup_name.
  */
@@ -15,15 +15,38 @@
 #include <linux/slab.h>
 #include <linux/list.h>
 #include <linux/kprobes.h>
+#include <linux/hashtable.h>
+#include <linux/tracepoint.h>
+#include <linux/workqueue.h>
 #include <trace/hooks/binder.h>
 #include <../android/binder_internal.h>
 #include "rekernel_internal.h"
 
 #ifdef CLEAN_UP_ASYNC_BINDER
 static unsigned long (*re_kallsyms_lookup_name)(const char* name);
-static void (*re_kernel_transaction_buffer_release)(struct binder_proc* proc, struct binder_thread* thread, struct binder_buffer* buffer, binder_size_t off_end_offset, bool is_failure);
 static void (*re_kernel_alloc_free_buf)(struct binder_alloc* alloc, struct binder_buffer* buffer);
+static void (*re_kernel_proc_dec_tmpref)(struct binder_proc* proc);
+static void (*re_kernel_free_proc)(struct binder_proc* proc);
 static struct binder_stats(*re_kernel_stats);
+static struct workqueue_struct *binder_cleanup_wq;
+static struct tracepoint *binder_alloc_buf_tp;
+static struct tracepoint *binder_write_done_tp;
+static DEFINE_HASHTABLE(binder_cleanup_pending, 6);
+static DEFINE_SPINLOCK(binder_cleanup_lock);
+
+struct binder_cleanup_work {
+	struct work_struct work;
+	struct hlist_node entry;
+	struct task_struct *sender;
+	struct binder_proc *proc;
+	/* Identity only: the worker must rediscover this transaction in the queue. */
+	struct binder_transaction *transaction;
+	int transaction_id;
+	binder_uintptr_t node_ptr;
+	binder_uintptr_t node_cookie;
+	int node_id;
+	bool write_done;
+};
 
 /* Stable UAPI value; some older vendor headers do not name this flag. */
 #define REKERNEL_TF_UPDATE_TXN 0x40
@@ -35,6 +58,72 @@ static void line_binder_alloc_new_buf_locked(void *data, size_t size, size_t *fr
 static void line_binder_alloc_new_buf_locked(void *data, size_t size, size_t *free_async_space, int is_async)
 #elif (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0))
 static void line_binder_alloc_new_buf_locked(void *data, size_t size, struct binder_alloc *alloc, int is_async)
+#endif
+{
+	struct task_struct *p = NULL;
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 15, 0))
+	struct binder_alloc *alloc = NULL;
+
+	alloc = container_of(free_async_space, struct binder_alloc, free_async_space);
+	if (alloc == NULL) {
+		return;
+	}
+#endif
+	if (is_async
+		&& (alloc->free_async_space < 3 * (size + sizeof(struct binder_buffer))
+		|| (alloc->free_async_space < WARN_AHEAD_SPACE))) {
+		rcu_read_lock();
+		p = find_task_by_vpid(alloc->pid);
+		rcu_read_unlock();
+		if (p != NULL && line_is_frozen(p)) {
+#ifdef DEBUG
+			pr_info("[Re-Kernel LKM] Binder Free buffer full! from=%d | target=%d\n", task_uid(current).val, task_uid(p).val);
+#endif
+			if (rekernel_netlink_ready()) {
+				char binder_kmsg[PACKET_SIZE];
+				int len = scnprintf(binder_kmsg, sizeof(binder_kmsg), "type=Binder,bindertype=free_buffer_full,oneway=1,from_pid=%d,from=%d,target_pid=%d,target=%d,rpc_name=%s,code=%d;", task_tgid_nr(current), task_uid(current).val, task_tgid_nr(p), task_uid(p).val, "FREE_BUFFER_FULL", -1);
+				sendMessage(binder_kmsg, len);
+			}
+		}
+	}
+}
+
+static struct hlist_head *binder_procs = NULL;
+static struct mutex *binder_procs_lock = NULL;
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0))
+static void line_binder_preset(void *data, struct hlist_head *hhead,
+	struct mutex *lock, struct binder_proc *proc)
+#else
+static void line_binder_preset(void *data, struct hlist_head *hhead,
+	struct mutex *lock)
+#endif
+{
+	if (binder_procs == NULL)
+		binder_procs = hhead;
+
+	if (binder_procs_lock == NULL)
+		binder_procs_lock = lock;
+}
+
+static void line_binder_reply(void *data, struct binder_proc *target_proc, struct binder_proc *proc,
+	struct binder_thread *thread, struct binder_transaction_data *tr)
+{
+	if (target_proc
+		&& (NULL != target_proc->tsk)
+		&& (NULL != proc->tsk)
+		&& (task_uid(target_proc->tsk).val <= MAX_SYSTEM_UID)
+		&& (proc->pid != target_proc->pid)
+		&& line_is_frozen(target_proc->tsk)) {
+#ifdef DEBUG
+		pr_info("[Re-Kernel LKM] Sync Binder Reply! from=%d | target=%d\n", task_uid(proc->tsk).val, task_uid(target_proc->tsk).val);
+#endif
+		if (rekernel_netlink_ready()) {
+			char binder_kmsg[PACKET_SIZE];
+			int len = scnprintf(binder_kmsg, sizeof(binder_kmsg), "type=Binder,bindertype=reply,oneway=0,from_pid=%d,from=%d,target_pid=%d,target=%d,rpc_name=%s,code=%d;", task_tgid_nr(proc->tsk), task_uid(proc->tsk).val, task_tgid_nr(target_proc->tsk), task_uid(target_proc->tsk).val, "SYNC_BINDER_REPLY", -1);
+			sendMessage(binder_kmsg, len);
+		}
+	}static void line_binder_alloc_new_buf_locked(void *data, size_t size, struct binder_alloc *alloc, int is_async)
 #endif
 {
 	struct task_struct *p = NULL;
