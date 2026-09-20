@@ -37,7 +37,7 @@ static inline bool rekernel_is_frozen_state_compatible(struct task_struct *task)
 
 static inline bool rekernel_is_jobctl_frozen_compatible(struct task_struct *task)
 {
-#if (LINUX_VERSION_CODE <= KERNEL_VERSION(5, 10, 0))
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 15, 0))
 	return cgroup_task_freeze(task);
 #else
 	return ((task->jobctl & JOBCTL_TRAP_FREEZE) != 0);
