@@ -19,7 +19,7 @@
 #include <linux/tracepoint.h>
 #include <linux/workqueue.h>
 #include <trace/hooks/binder.h>
-#include <../android/binder_internal.h>
+#include "binder_internal.h"
 #include "rekernel_internal.h"
 
 #ifdef CLEAN_UP_ASYNC_BINDER
